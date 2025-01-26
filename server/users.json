@@ -1,0 +1,8 @@
+{
+    "template": {
+        "id": "0000",
+        "username": "bot",
+        "password": "encrypted",
+        "permission_level": "basic"
+    }
+}
