@@ -1,0 +1,13 @@
+{
+    "HOST": "127.0.0.1",
+    "PORT": 12345,
+    "run_server": true,
+    "user_capacity": 5,
+    "client_cmds": {
+        "create_client": true
+    },
+    "user_count": 0,
+    "function_keys":{
+        "veus": "verify_user"
+    }
+}
