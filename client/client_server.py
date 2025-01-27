@@ -38,6 +38,9 @@ def send_to_server(client_sock, msg, supress = False):
         try:
             client_sock.sendall(json.dumps(msg).encode())
             return True
+        except socket.timeout:
+            print("Socket timed out waiting for data.")
+            return
         except Exception as e:
             if not supress:
                 print(f"Could not send message to server {e}\n")
@@ -48,6 +51,10 @@ def send_to_server(client_sock, msg, supress = False):
 def recieve_from_server(client_sock):
     try:
         data = client_sock.recv(1024)
+    except socket.timeout:
+        print("Socket timed out waiting for data.")
+        add_to_response_log(None)
+        return 
     except Exception as e:
         print(f"Could not recieve from server: {e}\n")
         return None
@@ -147,6 +154,7 @@ def client(): #activates a client
         config["active_heartbeat"] = True
         response_queue = ds.Queue()
         user = client_joined(client_sock, response_queue)
+        client_sock.settimeout(5)
         while True:
             status = status_check(client_sock)
             if status == False or config["active_heartbeat"] == False:
@@ -157,9 +165,10 @@ def client(): #activates a client
                 break
 
             ask = input("Cmd: ")
-            msg = gen_message("ping", "ping")
+            msg = gen_message(ask, "ping")
             send_to_server(client_sock, msg)
             data = recieve_from_server(client_sock)
+            print(data)
             time.sleep(0.02)
       
         #client_sock.close()

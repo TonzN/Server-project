@@ -40,10 +40,9 @@ HOST = config["HOST"]
 PORT = config["PORT"]
 client_capacity = config["user_capacity"]
 func_keys = config["function_keys"]
-recieve_timout = 15
-timeout = 15
+recieve_timout = 150
+timeout = 150
 user_profiles = {}
-recieve_timout = 5
 
 async def update_users_count():
     config["user_count"] += 1
@@ -95,12 +94,16 @@ async def client_recieve_handler(client_socket, loop):
             except Exception as e:
                 print(f"Function is not a valid server request: {e}")
                 return False
+        else:
+            response = {"data": ["invalid action"]}
+            await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
+            return True
 
         if response:
             response = {"data": [response]}
             await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
             return True
-    
+
     except asyncio.TimeoutError:
         print("Socket timout, could not send or recieve in time")
         return False
