@@ -3,7 +3,7 @@ import asyncio
 import json
 import time
 import threading
-import queue
+import datastructures as ds
 
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 12345  # The port used by the server
@@ -14,6 +14,11 @@ HEARTBEAT_INTERVAL = 5
 short_lived_client = True
 
 server_response_log = []
+receieve_queue = { #tag associated with where message has associated function
+    "hearbeat": ds.Queue(),
+    "join_protocol": ds.Queue(),
+    "main": ds.Queue()
+}
 
 #load paths
 try: #attempt fetching configs
