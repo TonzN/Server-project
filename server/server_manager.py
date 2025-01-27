@@ -40,8 +40,9 @@ HOST = config["HOST"]
 PORT = config["PORT"]
 client_capacity = config["user_capacity"]
 func_keys = config["function_keys"]
-recieve_timout = 10
+recieve_timout = 15
 timeout = 15
+user_profiles = {}
 
 async def update_users_count():
     config["user_count"] += 1
@@ -53,7 +54,14 @@ def verify_user(username):
         return 0
 
 def ping(msg):
+    config["heartbeat_time"] = time.time()
     return "pong"
+
+def set_client(user):
+    user_profiles[user] = {}
+    user_profiles[user]["name"] = user
+    user_profiles[user]["connection_error_count"] = 0
+    return True
 
 async def safe_client_disconnect(client_socket, loop):
     response = "disconnect"
@@ -65,6 +73,7 @@ async def safe_client_disconnect(client_socket, loop):
     client_socket.close()
     #print("disconnect user...")
     return
+
 
 async def client_recieve_handler(client_socket, loop):
     try:
@@ -79,7 +88,7 @@ async def client_recieve_handler(client_socket, loop):
             print(msg, function)
             print(f"Could not get function and msg: {e}")
             return
-       
+        
         if function in func_keys: 
             try:
                 response = str(globals()[func_keys[function]](msg)) 
@@ -88,9 +97,6 @@ async def client_recieve_handler(client_socket, loop):
                 return False
 
         if response:
-            if response == "pong":
-                config["heartbeat_time"] = time.time()
-
             response = {"data": [response]}
             await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
             return True
@@ -101,13 +107,24 @@ async def client_recieve_handler(client_socket, loop):
     
     except Exception as e:
         print(f"could not recieve or send back to client {e}")
-        return False
+        return "Lost client"
 
 async def client_handler(client_socket):
     loop = asyncio.get_event_loop()
     client_is_connected = True
+    lost_conn_counter = 0
     while client_is_connected:
-        await client_recieve_handler(client_socket, loop)
+        crh = await client_recieve_handler(client_socket, loop)
+        if crh == "Lost client":
+            lost_conn_counter += 1
+        else:
+            lost_conn_counter = 0
+        
+        if lost_conn_counter == 3:
+            print("Disconnected server to client")
+            client_is_connected = False
+            await safe_client_disconnect(client_socket, loop)
+
         if time.time() - config["heartbeat_time"] > timeout:
             print("Client timout! Have not recieved a ping for too long!")
             client_is_connected = False

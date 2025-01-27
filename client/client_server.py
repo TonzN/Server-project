@@ -46,8 +46,8 @@ def recieve_from_server(client_sock):
     except Exception as e:
         print(f"Could not recieve from server: {e}\n")
         return None
-    print(data)
     msg = json.loads(data.decode())
+    add_to_response_log(msg["data"][0])
     return msg["data"][0]
 
 def new_user_protocol():
@@ -69,11 +69,16 @@ def client_joined(client_sock, r_queue):
     message = gen_message("veus", user)
     send_to_server(client_sock, message)
     response = recieve_from_server(client_sock)
-    add_to_response_log(response)
-  
-    if type(response) is int:
-        if response == 1:
-            print(f"Welcome back {user}")
+    
+    if response:
+        if int(response) == 1:
+            msg = gen_message("set_user", user)
+            send_to_server(client_sock, msg)
+            response = recieve_from_server(client_sock)
+            if response:
+                print(f"Welcome back {user}")
+            else:
+                print("Could not set up server profile")
         else:
             user = "nan"
             print(f"User does not exist. Want to create a user?")
@@ -89,7 +94,7 @@ def client_joined(client_sock, r_queue):
 
 def status_check(client_socket, force_ping = False):
     for response in server_response_log:
-        print(response, server_response_log)
+        print(response)
         if response == "disconnect":
             print("Warning: server disconnected client")
             return False
@@ -131,9 +136,9 @@ def client(): #activates a client
             print(f"Client did not connect: {e}\n")
             return
         
-        stop_event = threading.Event()
-        heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event), daemon=True)
-        heartbeat_thread.start()
+      #  stop_event = threading.Event()
+    #    heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event), daemon=True)
+       # heartbeat_thread.start()
         config["active_heartbeat"] = True
         response_queue = queue.Queue()
         user = client_joined(client_sock, response_queue)
@@ -141,8 +146,8 @@ def client(): #activates a client
             status = status_check(client_sock)
             if status == False or config["active_heartbeat"] == False:
                 client_sock.close()
-                stop_event.set()
-                heartbeat_thread.join()  # Wait for the thread to finish
+              #  stop_event.set()
+              #  heartbeat_thread.join()  # Wait for the thread to finish
                 print(f"Disconnected client {user}, lost connection to server\n")
                 break
 
@@ -150,6 +155,7 @@ def client(): #activates a client
             msg = gen_message("ping", "ping")
             send_to_server(client_sock, msg)
             data = recieve_from_server(client_sock)
+            time.sleep(0.02)
       
         #client_sock.close()
         #print(f"Disconnected client {user}\n")
