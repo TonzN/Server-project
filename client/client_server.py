@@ -3,7 +3,7 @@ import asyncio
 import json
 import time
 import threading
-import datastructures as ds
+import client.datastructures as ds
 
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 12345  # The port used by the server
@@ -145,7 +145,7 @@ def client(): #activates a client
     #    heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event), daemon=True)
        # heartbeat_thread.start()
         config["active_heartbeat"] = True
-        response_queue = queue.Queue()
+        response_queue = ds.Queue()
         user = client_joined(client_sock, response_queue)
         while True:
             status = status_check(client_sock)
