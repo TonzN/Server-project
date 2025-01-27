@@ -8,6 +8,8 @@
     },
     "user_count": 0,
     "function_keys":{
-        "veus": "verify_user"
-    }
+        "veus": "verify_user",
+        "ping": "ping"
+    },
+    "heartbeat_time": 0
 }

@@ -40,7 +40,8 @@ HOST = config["HOST"]
 PORT = config["PORT"]
 client_capacity = config["user_capacity"]
 func_keys = config["function_keys"]
-recieve_timout = 5
+recieve_timout = 10
+timeout = 15
 
 async def update_users_count():
     config["user_count"] += 1
@@ -52,14 +53,13 @@ def verify_user(username):
         return 0
 
 def ping(msg):
-    if msg == "ping":
-        return "pong"
+    return "pong"
 
 async def safe_client_disconnect(client_socket, loop):
     response = "disconnect"
     try: 
         await loop.sock_sendall(client_socket, json.dumps(response).encode())
-    except asyncio.TimeoutError:
+    except Exception as e:
         pass
 
     client_socket.close()
@@ -70,11 +70,11 @@ async def client_recieve_handler(client_socket, loop):
     try:
         data = await asyncio.wait_for(loop.sock_recv(client_socket, 1024), recieve_timout) #format: action: ... data: ...
         data = json.loads(data.decode())
- 
+        response = None
         try:
             function = data["action"]
             msg = data["data"]
-            #print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
+         #   print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
         except Exception as e:
             print(msg, function)
             print(f"Could not get function and msg: {e}")
@@ -84,11 +84,13 @@ async def client_recieve_handler(client_socket, loop):
             try:
                 response = str(globals()[func_keys[function]](msg)) 
             except Exception as e:
-                response = None
                 print(f"Function is not a valid server request: {e}")
                 return False
 
         if response:
+            if response == "pong":
+                config["heartbeat_time"] = time.time()
+
             response = {"data": [response]}
             await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
             return True
@@ -106,8 +108,12 @@ async def client_handler(client_socket):
     client_is_connected = True
     while client_is_connected:
         await client_recieve_handler(client_socket, loop)
-        client_is_connected = False
-        await safe_client_disconnect(client_socket, loop)
+        if time.time() - config["heartbeat_time"] > timeout:
+            print("Client timout! Have not recieved a ping for too long!")
+            client_is_connected = False
+            await safe_client_disconnect(client_socket, loop)
+        
+        time.sleep(0.02)
 
 async def run_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
@@ -116,6 +122,7 @@ async def run_server():
         server_socket.setblocking(False)
         loop = asyncio.get_event_loop()
         print("Server spawned!!")
+        config["heartbeat_time"] = time.time()
 
         while config["run_server"]:
             try: 
@@ -123,8 +130,8 @@ async def run_server():
                 print(f"Accepted connection from {client_addr}")
 
                 # Handle the client in a separate coroutine
-        
                 asyncio.create_task(client_handler(client_socket))
+
             except Exception as e:
                 print("Error in main loop {e} \n")
 
