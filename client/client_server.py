@@ -1,17 +1,12 @@
 import socket
+import threading
 import asyncio
 import json
+import subprocess
 import time
-import sys
-from pathlib import Path
-import os
 
-HOST = "127.0.0.1"  # The server's hostname or IP address
-PORT = 12345  # The port used by the server
-
-config_path = "client/client_config.json" #incase path changes
-run_terminal = True
-short_lived_client = True
+config_path = "server/config.json" #incase path changes
+users_path = "server/users.json"
 
 #load paths
 try: #attempt fetching configs
@@ -27,73 +22,116 @@ except PermissionError:
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
 
+try: #attempt fetching users
+    with open(users_path, 'r') as file:
+        users = json.load(file)
+        print("JSON file loaded successfully!")
+except FileNotFoundError:
+    print(f"Error: The file '{users_path}' does not exist.")
+except json.JSONDecodeError:
+    print(f"Error: The file '{users_path}' contains invalid JSON.")
+except PermissionError:
+    print(f"Error: Permission denied while accessing '{users_path}'.")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
 
-def send_to_server(client_sock, msg): #attempts sending to server, must be in json format
-    if type(msg) is dict:
-        try:
-            client_sock.sendall(json.dumps(msg).encode("utf-8"))
-        except Exception as e:
-            print(f"Could not send message to server {e}\n")
+
+HOST = config["HOST"]
+PORT = config["PORT"]
+client_capacity = config["user_capacity"]
+func_keys = config["function_keys"]
+recieve_timout = 5
+
+async def update_users_count():
+    config["user_count"] += 1
+
+def verify_user(username):
+    if username in users:
+        return 1
     else:
-        print(f"Protocol doesnt allow for {type(msg)} msg must me formatted in dictionary(action: ..., data: ...)")
+        return 0
 
-def recieve_from_server(client_sock): #attempts recieving
+def ping(msg):
+    if msg == "ping":
+        return "pong"
+
+async def safe_client_disconnect(client_socket, loop):
+    response = "disconnect"
+    try: 
+        await loop.sock_sendall(client_socket, json.dumps(response).encode())
+    except asyncio.TimeoutError:
+        pass
+
+    client_socket.close()
+    #print("disconnect user...")
+    return
+
+async def client_recieve_handler(client_socket, loop):
     try:
-        data = client_sock.recv(1024)
-    except Exception as e:
-        print(f"Could not recieve from server: {e}\n")
-        return
-    return json.loads(data.decode())
-
-def new_user_protocol():
-    valid_username = False
-    while not valid_username:
-        username = input("New username: ")
-
-
-def client_joined(client_sock): #checks wether the username is in the server or not
-    user = str(input("Username: "))
-    message = {"action": "veus", "data": user}
-    send_to_server(client_sock, message )
-    response = recieve_from_server(client_sock)["data"]
-    if int(response) == 1:
-        print(f"Welcome back {user}")
-    else:
-        user = "nan"
-        print(f"User does not exist. Want to create a user?") #iniate new_user
-        new_user = input("y/n? ")
-        if new_user.lower() == "y":
-            new_user_protocol()
-    
-    return user
-
-
-def client(): #activates a client
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_sock:
+        data = await asyncio.wait_for(loop.sock_recv(client_socket, 1024), recieve_timout) #format: action: ... data: ...
+        data = json.loads(data.decode())
+ 
         try:
-            client_sock.connect((HOST, PORT)) #establish client connection to server
-            print(f"Client connected.\n")
+            function = data["action"]
+            msg = data["data"]
+            #print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
         except Exception as e:
-            print(f"Client did not connect: {e}\n")
+            print(msg, function)
+            print(f"Could not get function and msg: {e}")
             return
+       
+        if function in func_keys: 
+            try:
+                response = str(globals()[func_keys[function]](msg)) 
+            except Exception as e:
+                response = None
+                print(f"Function is not a valid server request: {e}")
+                return False
 
-        for i in range(10):
-            user = client_joined(client_sock)
-  
-            
-        client_sock.close()
-        print(f"Disconnected client {user}\n")
+        if response:
+            response = {"data": [response]}
+            await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
+            return True
     
-def main():
-    client()
+    except asyncio.TimeoutError:
+        print("Socket timout, could not send or recieve in time")
+        return False
+    
+    except Exception as e:
+        print(f"could not recieve or send back to client {e}")
+        return False
 
-while run_terminal:
-    time.sleep(0.1)
-    main()
+async def client_handler(client_socket):
+    loop = asyncio.get_event_loop()
+    client_is_connected = True
+    while client_is_connected:
+        await client_recieve_handler(client_socket, loop)
+        client_is_connected = False
+        await safe_client_disconnect(client_socket, loop)
 
-    cmd = input("command: ")
-    if cmd == "close":
-        run_terminal = False
+async def run_server():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+        server_socket.bind((HOST, PORT))
+        server_socket.listen(client_capacity)
+        server_socket.setblocking(False)
+        loop = asyncio.get_event_loop()
+        print("Server spawned!!")
+
+        while config["run_server"]:
+            try: 
+                client_socket, client_addr = await loop.sock_accept(server_socket)
+                print(f"Accepted connection from {client_addr}")
+
+                # Handle the client in a separate coroutine
         
+                asyncio.create_task(client_handler(client_socket))
+            except Exception as e:
+                print("Error in main loop {e} \n")
 
+    print("closing server\n")
     
+
+async def main():
+    await run_server()
+
+asyncio.run(main())

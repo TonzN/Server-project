@@ -3,17 +3,10 @@ import threading
 import asyncio
 import json
 import subprocess
-import sys
-from pathlib import Path
-import os
-import client_manager
-
-if "client" in sys.argv[0] or "client" in os.getcwd():
-    raise ImportError("This module is restricted to the server environment.")
+import time
 
 config_path = "server/config.json" #incase path changes
 users_path = "server/users.json"
-server_key = ""
 
 #load paths
 try: #attempt fetching configs
@@ -47,6 +40,7 @@ HOST = config["HOST"]
 PORT = config["PORT"]
 client_capacity = config["user_capacity"]
 func_keys = config["function_keys"]
+recieve_timout = 5
 
 async def update_users_count():
     config["user_count"] += 1
@@ -55,39 +49,65 @@ def verify_user(username):
     if username in users:
         return 1
     else:
-        return -1
+        return 0
 
-def create_user(username):
-    if not verify_user(username):
+def ping(msg):
+    if msg == "ping":
+        return "pong"
+
+async def safe_client_disconnect(client_socket, loop):
+    response = "disconnect"
+    try: 
+        await loop.sock_sendall(client_socket, json.dumps(response).encode())
+    except asyncio.TimeoutError:
         pass
-    else:
-        print("warning, user already exist!")
 
+    client_socket.close()
+    #print("disconnect user...")
+    return
 
-
-async def client_handler(client_socket):
-    loop = asyncio.get_event_loop()
+async def client_recieve_handler(client_socket, loop):
     try:
-        data = await loop.sock_recv(client_socket, 1024) #formated action: ... data: ...
+        data = await asyncio.wait_for(loop.sock_recv(client_socket, 1024), recieve_timout) #format: action: ... data: ...
         data = json.loads(data.decode())
-        func = data["action"]
-        if func in func_keys: 
+ 
+        try:
+            function = data["action"]
+            msg = data["data"]
+            #print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
+        except Exception as e:
+            print(msg, function)
+            print(f"Could not get function and msg: {e}")
+            return
+       
+        if function in func_keys: 
             try:
-                response = {"data": str(globals()[func_keys[func]](data["data"]))}
-
+                response = str(globals()[func_keys[function]](msg)) 
             except Exception as e:
+                response = None
                 print(f"Function is not a valid server request: {e}")
-        
+                return False
+
         if response:
-            print(response)
-            await loop.sock_sendall(client_socket, json.dumps(response).encode())
+            response = {"data": [response]}
+            await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
+            return True
+    
+    except asyncio.TimeoutError:
+        print("Socket timout, could not send or recieve in time")
+        return False
     
     except Exception as e:
         print(f"could not recieve or send back to client {e}")
-    
-    finally:
-        print("Disconnected client")
-        client_socket.close()
+        return False
+
+async def client_handler(client_socket):
+    loop = asyncio.get_event_loop()
+    client_is_connected = True
+    while client_is_connected:
+        await client_recieve_handler(client_socket, loop)
+        client_is_connected = False
+        await safe_client_disconnect(client_socket, loop)
 
 async def run_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
@@ -110,12 +130,6 @@ async def run_server():
 
     print("closing server\n")
     
-
-async def main():
-    await run_server()
-
-asyncio.run(main())
-
 
 async def main():
     await run_server()
