@@ -3,7 +3,7 @@ import asyncio
 import json
 import time
 import threading
-import client.datastructures as ds
+import datastructures as ds
 
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 12345  # The port used by the server
@@ -52,8 +52,9 @@ def recieve_from_server(client_sock):
         print(f"Could not recieve from server: {e}\n")
         return None
     msg = json.loads(data.decode())
-    add_to_response_log(msg["data"][0])
-    return msg["data"][0]
+    content = msg["data"][0]
+    add_to_response_log(content)
+    return content
 
 def new_user_protocol():
     pass
@@ -99,7 +100,6 @@ def client_joined(client_sock, r_queue):
 
 def status_check(client_socket, force_ping = False):
     for response in server_response_log:
-        print(response)
         if response == "disconnect":
             print("Warning: server disconnected client")
             return False
