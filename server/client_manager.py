@@ -1,8 +1,18 @@
 import json
 import socket
 
+<<<<<<< HEAD
 config_path = "server/config.json" #incase path changes
 users_path = "server/users.json" #incase path changes
+=======
+<<<<<<< HEAD
+config_path = "server/config.json" #incase path changes
+users_path = "server/users.json" #incase path changes
+=======
+config_path = "config.json" #incase path changes
+users_path = "users.json" #incase path changes
+>>>>>>> lab
+>>>>>>> unified-main
 
 
 #load paths
@@ -52,7 +62,17 @@ def create_user():
         
     users[username]["id"] = gen_user_id()
     users["permission_level"] = "basic"
+<<<<<<< HEAD
 
  
 
 print(gen_user_id())
+=======
+<<<<<<< HEAD
+
+ 
+
+print(gen_user_id())
+=======
+>>>>>>> lab
+>>>>>>> unified-main

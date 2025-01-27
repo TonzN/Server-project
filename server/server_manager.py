@@ -43,6 +43,7 @@ func_keys = config["function_keys"]
 recieve_timout = 15
 timeout = 15
 user_profiles = {}
+recieve_timout = 5
 
 async def update_users_count():
     config["user_count"] += 1
@@ -73,7 +74,6 @@ async def safe_client_disconnect(client_socket, loop):
     client_socket.close()
     #print("disconnect user...")
     return
-
 
 async def client_recieve_handler(client_socket, loop):
     try:
