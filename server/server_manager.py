@@ -40,10 +40,10 @@ HOST = config["HOST"]
 PORT = config["PORT"]
 client_capacity = config["user_capacity"]
 func_keys = config["function_keys"]
-recieve_timout = 15
-timeout = 15
+recieve_timout = 15000
+timeout = 15000
 user_profiles = {}
-recieve_timout = 5
+recieve_timout = 560000
 
 async def update_users_count():
     config["user_count"] += 1
