@@ -22,4 +22,3 @@ class Stack:
     def Push(self, Input):
         self.stack.append(Input)
 
-print("Urmom")
