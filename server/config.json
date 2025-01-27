@@ -9,13 +9,8 @@
     "user_count": 0,
     "function_keys":{
         "veus": "verify_user",
-<<<<<<< HEAD
         "ping": "ping",
         "set_user": "set_client"
     },
     "heartbeat_time": 0
-=======
-        "ping": "ping"
-    }
->>>>>>> lab
 }
