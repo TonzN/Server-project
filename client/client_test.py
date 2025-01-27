@@ -41,9 +41,5 @@ async def main():
     tasks = [client(i) for i in range(num_clients)]
     await asyncio.gather(*tasks)
 
-<<<<<<< HEAD
 asyncio.run(main())
-asyncio.run(main())
-=======
-asyncio.run(main())
->>>>>>> lab
+
