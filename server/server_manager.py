@@ -58,10 +58,12 @@ def ping(msg):
     return "pong"
 
 def set_client(user):
-    user_profiles[user] = {}
-    user_profiles[user]["name"] = user
-    user_profiles[user]["connection_error_count"] = 0
-    return True
+    if user in user_profiles:
+        user_profiles[user] = {}
+        user_profiles[user]["name"] = user
+        user_profiles[user]["connection_error_count"] = 0
+        return True
+    return False
 
 async def safe_client_disconnect(client_socket, loop):
     response = "disconnect"
@@ -82,9 +84,10 @@ async def client_recieve_handler(client_socket, loop):
         try:
             function = data["action"]
             msg = data["data"]
+            tag = data["tag"]
          #   print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
         except Exception as e:
-            print(msg, function)
+            print(msg, function, tag)
             print(f"Could not get function and msg: {e}")
             return
         
@@ -93,10 +96,11 @@ async def client_recieve_handler(client_socket, loop):
                 response = str(globals()[func_keys[function]](msg)) 
             except Exception as e:
                 print(f"Function is not a valid server request: {e}")
+                await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
                 return False
 
         if response:
-            response = {"data": [response]}
+            response = {"data": [response, tag]}
             await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
             return True
     

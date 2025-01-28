@@ -1,17 +1,19 @@
 class Queue:    
-    def __init__(self, Input = []):
+    def __init__(self, Input):
         self.queue = Input
 
     def Pop(self):
-        x = self.queue[0]
-        self.queue.pop(0)
-        return x
-    
+        if len(self.queue) > 0:
+            x = self.queue[0]
+            self.queue.pop(0)
+            return x
+        return
+        
     def Push(self, Input):
         self.queue.append(Input)
 
 class Stack:
-    def __init__(self, Input = []):
+    def __init__(self, Input):
         self.stack = Input
 
     def Pop(self):
