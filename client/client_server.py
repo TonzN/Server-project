@@ -103,7 +103,8 @@ def client_joined(client_sock, r_queue):
     if got_response:
         response = receieve_queue["join_protocol"].Pop()
         if int(response) == 1:
-            msg = gen_message("set_user", user, "join_protocol")
+            message = {"user": user, "socket": str(client_sock)}
+            msg = gen_message("set_user", message , "join_protocol")
             send_to_server(client_sock, msg)
             got_response = recieve_from_server(client_sock, ["join_protocol", 0])
             if got_response:
@@ -111,12 +112,13 @@ def client_joined(client_sock, r_queue):
                 if set_user:
                     print(f"Welcome back {user}")
                 else:
-                    print("Could not set up server profile")
+                    print("Could not set up server profile, profile may already be setup")
+                    return False
+
             else:
                 print("Did not get set user or server disconnected")
-                return "nan"
+                return False
         else:
-            user = "nan"
             print(f"User does not exist. Want to create a user?")
             user_rsp = input("y/n? \nAnswer: ")
             if user_rsp.lower() == "y":
@@ -125,7 +127,7 @@ def client_joined(client_sock, r_queue):
                 print("Make a user to use this server.")
     else:
         print("Did not receieve from server or some unexpected error happebned")
-        user = "nan"
+        False
 
     return user
 
@@ -227,7 +229,7 @@ while run_terminal:
     cmd = input("command: ")
     if cmd == "close":
         run_terminal = False
-        
+
     if cmd == "connect":
         main()
         

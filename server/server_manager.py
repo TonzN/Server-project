@@ -62,12 +62,21 @@ def ping(msg):
     config["heartbeat_time"] = time.time()
     return "pong"
 
-def set_client(user):
+def set_client(userdata): #only used when a client joins! profile contains server data important to run clients
+    try: 
+        user = userdata["user"]
+        sock = userdata["socket"]
+    except Exception as e:
+        print(f"invalid userdata {user} {sock} {e}")
+        return False
+    
     if not user in user_profiles:
-        user_profiles[user] = {}
-        user_profiles[user]["name"] = user
-        user_profiles[user]["connection_error_count"] = 0
+        user_profiles[sock] = {}
+        user_profiles[sock]["name"] = user
+        user_profiles[sock]["connection_error_count"] = 0
+        print(f"User: {user} connected to server with socket {sock}")
         return True
+    
     return False
 
 async def safe_client_disconnect(client_socket, loop):
@@ -127,23 +136,26 @@ async def client_handler(client_socket):
     client_is_connected = True
     lost_conn_counter = 0
     config["heartbeat_time"] = time.time()
+    standby = True
+    valid_user = False
     while client_is_connected:
-        crh = await client_recieve_handler(client_socket, loop)
-        if crh == "Lost client":
-            lost_conn_counter += 1
-        else:
-            lost_conn_counter = 0
-        
-        if lost_conn_counter == 3:
-            print("Disconnected server to client")
-            client_is_connected = False
-            await safe_client_disconnect(client_socket, loop)
+        if standby or valid_user:
+            crh = await client_recieve_handler(client_socket, loop)
+            if crh == "Lost client":
+                lost_conn_counter += 1
+            else:
+                lost_conn_counter = 0
+            
+            if lost_conn_counter == 3:
+                print("Disconnected server to client")
+                client_is_connected = False
+                await safe_client_disconnect(client_socket, loop)
 
-        if time.time() - config["heartbeat_time"] > timeout:
-            print("Client timout! Have not recieved a ping for too long!")
-            client_is_connected = False
-            await safe_client_disconnect(client_socket, loop)
-        
+            if time.time() - config["heartbeat_time"] > timeout:
+                print("Client timout! Have not recieved a ping for too long!")
+                client_is_connected = False
+                await safe_client_disconnect(client_socket, loop)
+            
         time.sleep(0.02)
 
 async def run_server():
