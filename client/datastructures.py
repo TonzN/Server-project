@@ -1,6 +1,6 @@
 class Queue:    
-    def __init__(self, Input):
-        self.queue = Input
+    def __init__(self):
+        self.queue = []
 
     def Pop(self):
         if len(self.queue) > 0:
@@ -13,8 +13,8 @@ class Queue:
         self.queue.append(Input)
 
 class Stack:
-    def __init__(self, Input):
-        self.stack = Input
+    def __init__(self):
+        self.stack = []
 
     def Pop(self):
         x = self.stack[len(self.stack)-1]

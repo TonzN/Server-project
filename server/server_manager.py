@@ -4,6 +4,7 @@ import asyncio
 import json
 import subprocess
 import time
+import os
 
 config_path = "server/config.json" #incase path changes
 users_path = "server/users.json"
@@ -44,6 +45,10 @@ recieve_timout = 150
 timeout = 1500
 user_profiles = {}
 
+def kill_server(msg):
+    print(msg)
+    os._exit(0)
+
 async def update_users_count():
     config["user_count"] += 1
 
@@ -58,7 +63,7 @@ def ping(msg):
     return "pong"
 
 def set_client(user):
-    if user in user_profiles:
+    if not user in user_profiles:
         user_profiles[user] = {}
         user_profiles[user]["name"] = user
         user_profiles[user]["connection_error_count"] = 0
@@ -96,14 +101,19 @@ async def client_recieve_handler(client_socket, loop):
                 response = str(globals()[func_keys[function]](msg)) 
             except Exception as e:
                 print(f"Function is not a valid server request: {e}")
+                response = {"data": ["Attempted running function and failed", tag]}
                 await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
-                return False
+                return True
+        else:
+            response = {"data": ["invalid action", tag]}
+            await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
+            return True
 
         if response:
             response = {"data": [response, tag]}
             await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
             return True
-    
+
     except asyncio.TimeoutError:
         print("Socket timout, could not send or recieve in time")
         return False
@@ -116,6 +126,7 @@ async def client_handler(client_socket):
     loop = asyncio.get_event_loop()
     client_is_connected = True
     lost_conn_counter = 0
+    config["heartbeat_time"] = time.time()
     while client_is_connected:
         crh = await client_recieve_handler(client_socket, loop)
         if crh == "Lost client":
@@ -142,7 +153,6 @@ async def run_server():
         server_socket.setblocking(False)
         loop = asyncio.get_event_loop()
         print("Server spawned!!")
-        config["heartbeat_time"] = time.time()
 
         while config["run_server"]:
             try: 

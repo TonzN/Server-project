@@ -10,7 +10,8 @@
     "function_keys":{
         "veus": "verify_user",
         "ping": "ping",
-        "set_user": "set_client"
+        "set_user": "set_client",
+        "kill_server": "kill_server"
     },
     "heartbeat_time": 0
 }
