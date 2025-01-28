@@ -44,6 +44,8 @@ def send_to_server(client_sock, msg, supress = False):
         except Exception as e:
             if not supress:
                 print(f"Could not send message to server {e}\n")
+        except socket.timeout:
+            print("Timed out trying to send message")
     else:
         if not supress:
             print("Invalid message format, please send as dictionary")
@@ -56,18 +58,32 @@ def recieve_from_server(client_sock):
         add_to_response_log(None)
         return 
     except Exception as e:
+        add_to_response_log(None)
         print(f"Could not recieve from server: {e}\n")
         return None
+    except socket.timeout():
+        add_to_response_log(None)
+        print("Timed out trying to receieve from server")
+        return None
+    
     msg = json.loads(data.decode())
     content = msg["data"][0]
+    tag = msg["data"][1]
     add_to_response_log(content)
-    return content
+
+    if tag in receieve_queue:
+        receieve_queue[tag].Push(content)
+    else:
+        print(f"invalid tag {tag}")
+        return False
+    
+    return True
 
 def new_user_protocol():
     pass
 
-def gen_message(action="", data=""):
-    return {"action": action, "data":data}
+def gen_message(action="", data="", tag=""):
+    return {"action": action, "data":data, "tag": tag}
 
 def add_to_response_log(response):
     log_len = len(server_response_log)
@@ -79,19 +95,25 @@ def add_to_response_log(response):
 
 def client_joined(client_sock, r_queue):
     user = input("Username: ")
-    message = gen_message("veus", user)
+    message = gen_message("veus", user, "join_protocol")
     send_to_server(client_sock, message)
-    response = recieve_from_server(client_sock)
+    got_response = recieve_from_server(client_sock)
     
-    if response:
+    if got_response:
+        response = receieve_queue["join_protocol"].Pop()
         if int(response) == 1:
-            msg = gen_message("set_user", user)
+            msg = gen_message("set_user", user, "join_protocol")
             send_to_server(client_sock, msg)
-            response = recieve_from_server(client_sock)
-            if response:
-                print(f"Welcome back {user}")
+            got_response = recieve_from_server(client_sock)
+            if got_response:
+                set_user = receieve_queue["join_protocol"].Pop()
+                if set_user:
+                    print(f"Welcome back {user}")
+                else:
+                    print("Could not set up server profile")
             else:
-                print("Could not set up server profile")
+                print("Did not get set user or server disconnected")
+                return "nan"
         else:
             user = "nan"
             print(f"User does not exist. Want to create a user?")
@@ -101,6 +123,7 @@ def client_joined(client_sock, r_queue):
             else:
                 print("Make a user to use this server.")
     else:
+        print("Did not receieve from server or some unexpected error happebned")
         user = "nan"
 
     return user
@@ -141,9 +164,12 @@ def heartbeat(client_socket, stop):
     
 def client(): #activates a client
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_sock:
+        client_sock.settimeout(5)
         try:
             client_sock.connect((HOST, PORT))
             print(f"Client connected.\n")
+        except socket.timeout:
+            print("Client timeout: attempted connecting for too long")
         except Exception as e:
             print(f"Client did not connect: {e}\n")
             return
@@ -165,10 +191,12 @@ def client(): #activates a client
                 break
 
             ask = input("Cmd: ")
-            msg = gen_message(ask, "ping")
+            msg = gen_message(ask, "ping", "main")
             send_to_server(client_sock, msg)
-            data = recieve_from_server(client_sock)
-            print(data)
+            got_response = recieve_from_server(client_sock)
+            if got_response:
+                print("Server response:", receieve_queue["main"].Pop())
+                
             time.sleep(0.02)
       
         #client_sock.close()

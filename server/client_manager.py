@@ -3,7 +3,10 @@ import socket
 
 config_path = "server/config.json" #incase path changes
 users_path = "server/users.json" #incase path changes
+<<<<<<< HEAD
 
+=======
+>>>>>>> c5ff744466da4311072095f7e66bef343ff669f3
 
 #load paths
 try: #attempt fetching configs
@@ -52,3 +55,8 @@ def create_user():
         
     users[username]["id"] = gen_user_id()
     users["permission_level"] = "basic"
+<<<<<<< HEAD
+=======
+
+ 
+>>>>>>> c5ff744466da4311072095f7e66bef343ff669f3
