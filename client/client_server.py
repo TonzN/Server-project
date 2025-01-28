@@ -15,7 +15,7 @@ short_lived_client = True
 
 server_response_log = []
 receieve_queue = { #tag associated with where message has associated function
-    "hearbeat": ds.Queue(),
+    "heartbeat": ds.Queue(),
     "join_protocol": ds.Queue(),
     "main": ds.Queue()
 }
@@ -47,7 +47,7 @@ def send_to_server(client_sock, msg, supress = False):
         if not supress:
             print("Invalid message format, please send as dictionary")
 
-def recieve_from_server(client_sock):
+def recieve_from_server(client_sock, expected_tag=None):
     try:
         data = client_sock.recv(1024)
     except Exception as e:
@@ -59,18 +59,26 @@ def recieve_from_server(client_sock):
         print("Timed out trying to receieve from server")
         return None
     
-    msg = json.loads(data.decode())
-    content = msg["data"][0]
-    tag = msg["data"][1]
-    add_to_response_log(content)
+    buffer = data.decode()
+    while "\n" in buffer:
+        message, buffer = buffer.split("\n", 1)
 
-    if tag in receieve_queue:
-        receieve_queue[tag].Push(content)
-    else:
-        print(f"invalid tag {tag}")
-        return False
-    
-    return True
+        msg = json.loads(message)
+        content = msg["data"][0]
+        tag = msg["data"][1]
+        add_to_response_log(content)
+
+        if tag in receieve_queue:
+            receieve_queue[tag].Push(content)
+            if expected_tag: #incase heartbeat and some other receieve requests happens at the same time they may mistmatch, therefor it will call again
+                if expected_tag[0] != tag and expected_tag[1] < 3:
+                    expected_tag[1] += 1
+                    recieve_from_server(client_sock, expected_tag)
+        else:
+            print(f"invalid tag {tag}")
+            return False
+        
+        return True
 
 def new_user_protocol():
     pass
@@ -90,14 +98,14 @@ def client_joined(client_sock, r_queue):
     user = input("Username: ")
     message = gen_message("veus", user, "join_protocol")
     send_to_server(client_sock, message)
-    got_response = recieve_from_server(client_sock)
+    got_response = recieve_from_server(client_sock, ["join_protocol", 0])
     
     if got_response:
         response = receieve_queue["join_protocol"].Pop()
         if int(response) == 1:
             msg = gen_message("set_user", user, "join_protocol")
             send_to_server(client_sock, msg)
-            got_response = recieve_from_server(client_sock)
+            got_response = recieve_from_server(client_sock, ["join_protocol", 0])
             if got_response:
                 set_user = receieve_queue["join_protocol"].Pop()
                 if set_user:
@@ -144,15 +152,18 @@ def status_check(client_socket, force_ping = False):
 
 def heartbeat(client_socket, stop):
     while not stop.is_set():
-        msg = gen_message("ping", "ping")
-        if not send_to_server(client_socket, msg, True):
+        msg = gen_message("ping", "ping", "heartbeat")
+        sent = send_to_server(client_socket, msg, True) 
+        recieved = recieve_from_server(client_socket)
+        if not sent and recieved:
             print("Heartbeat failed. Server may be down.")
             stop.set()
             status = status_check(client_socket, True)
             if not status:
                 config["active_heartbeat"] = False
                 break
-
+        else:
+            receieve_queue["heartbeat"].Pop()
         time.sleep(HEARTBEAT_INTERVAL)
     
 def client(): #activates a client
@@ -167,9 +178,9 @@ def client(): #activates a client
             print(f"Client did not connect: {e}\n")
             return
         
-      #  stop_event = threading.Event()
-    #    heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event), daemon=True)
-       # heartbeat_thread.start()
+        stop_event = threading.Event()
+        heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event), daemon=True)
+        heartbeat_thread.start()
         config["active_heartbeat"] = True
         response_queue = ds.Queue()
         user = client_joined(client_sock, response_queue)
@@ -177,13 +188,25 @@ def client(): #activates a client
             status = status_check(client_sock)
             if status == False or config["active_heartbeat"] == False:
                 client_sock.close()
-              #  stop_event.set()
-              #  heartbeat_thread.join()  # Wait for the thread to finish
+                stop_event.set()
+                heartbeat_thread.join()  # Wait for the thread to finish
                 print(f"Disconnected client {user}, lost connection to server\n")
                 break
 
             ask = input("Cmd: ")
-            msg = gen_message(ask, "ping", "main")
+            if ask == "exit":
+                client_sock.close()
+                stop_event.set()
+                heartbeat_thread.join()  # Wait for the thread to finish
+                print(f"Goodbye {user}")
+                break
+
+            if ask == "ping":
+                msg_content = "ping"
+            else:
+                msg_content = input("Message to server: ")
+
+            msg = gen_message(ask, msg_content, "main")
             send_to_server(client_sock, msg)
             got_response = recieve_from_server(client_sock)
             if got_response:
@@ -199,10 +222,12 @@ def main():
 
 while run_terminal:
     time.sleep(0.1)
-    main()
     server_response_log = []    
 
     cmd = input("command: ")
     if cmd == "close":
         run_terminal = False
+        
+    if cmd == "connect":
+        main()
         

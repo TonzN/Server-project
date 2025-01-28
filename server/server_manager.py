@@ -41,8 +41,8 @@ HOST = config["HOST"]
 PORT = config["PORT"]
 client_capacity = config["user_capacity"]
 func_keys = config["function_keys"]
-recieve_timout = 150
-timeout = 1500
+recieve_timout = 5
+timeout = 15
 user_profiles = {}
 
 def kill_server(msg):
@@ -101,17 +101,17 @@ async def client_recieve_handler(client_socket, loop):
                 response = str(globals()[func_keys[function]](msg)) 
             except Exception as e:
                 print(f"Function is not a valid server request: {e}")
-                response = {"data": ["Attempted running function and failed", tag]}
-                await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
+                response = json.dumps({"data": ["Attempted running function and failed", tag]}) + "\n"
+                await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), recieve_timout)
                 return True
         else:
-            response = {"data": ["invalid action", tag]}
-            await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
+            response = json.dumps({"data": ["invalid action", tag]}) + "\n"
+            await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), recieve_timout)
             return True
 
         if response:
-            response = {"data": [response, tag]}
-            await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
+            response = json.dumps({"data": [response, tag]}) + "\n"
+            await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), recieve_timout)
             return True
 
     except asyncio.TimeoutError:
