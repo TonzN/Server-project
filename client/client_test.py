@@ -37,7 +37,7 @@ async def client(id):
 
 #run
 async def main():
-    num_clients = 5
+    num_clients = 1000
     tasks = [client(i) for i in range(num_clients)]
     await asyncio.gather(*tasks)
 

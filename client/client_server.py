@@ -80,11 +80,44 @@ def recieve_from_server(client_sock, expected_tag=None):
         
         return True
 
-def new_user_protocol():
-    pass
+def new_user_protocol(client_sock):
+    print("Create user")
+    user = input("Username: ")
+    password = input("Password: ")
+    message = gen_message("create_user", {"username": user, "password": password}, "join_protocol")
+    send_to_server(client_sock, message)
+    got_response = recieve_from_server(client_sock, ["join_protocol", 0])
+    
+    if got_response:
+        response = receieve_queue["join_protocol"].Pop()
+        if response == "1":
+            message = {"user": user, "socket": str(client_sock)}
+            msg = gen_message("set_user", message , "join_protocol")
+            send_to_server(client_sock, msg)
+            got_response = recieve_from_server(client_sock, ["join_protocol", 0])
+            if got_response:
+                token = receieve_queue["join_protocol"].Pop()
+                if token:
+                    print(f"Welcome {user}")
+                else:
+                    print("Could not set up server profile, profile may already be setup")
+                    return False
 
-def gen_message(action="", data="", tag=""):
-    return {"action": action, "data":data, "tag": tag}
+            else:
+                print("Did not get set user or server disconnected")
+                return False
+        else:
+            print("\nUser already exists\n")
+            new_user_protocol(client_sock)
+
+    else:
+        print("Did not receieve from server or some unexpected error happebned")
+        return False
+
+    return [user, token]
+
+def gen_message(action="", data="", tag="", token=None):
+    return {"action": action, "data":data, "tag": tag, "token": token}
 
 def add_to_response_log(response):
     log_len = len(server_response_log)
@@ -94,22 +127,23 @@ def add_to_response_log(response):
         server_response_log.pop(0)
         server_response_log.append(response)
 
-def client_joined(client_sock, r_queue):
+def client_joined(client_sock):
     user = input("Username: ")
-    message = gen_message("veus", user, "join_protocol")
+    password = input("Password: ")
+    message = gen_message("veus", {"username": user, "password": password}, "join_protocol")
     send_to_server(client_sock, message)
     got_response = recieve_from_server(client_sock, ["join_protocol", 0])
     
     if got_response:
         response = receieve_queue["join_protocol"].Pop()
-        if int(response) == 1:
+        if response == "1":
             message = {"user": user, "socket": str(client_sock)}
             msg = gen_message("set_user", message , "join_protocol")
             send_to_server(client_sock, msg)
             got_response = recieve_from_server(client_sock, ["join_protocol", 0])
             if got_response:
-                set_user = receieve_queue["join_protocol"].Pop()
-                if set_user:
+                token = receieve_queue["join_protocol"].Pop()
+                if token:
                     print(f"Welcome back {user}")
                 else:
                     print("Could not set up server profile, profile may already be setup")
@@ -119,17 +153,14 @@ def client_joined(client_sock, r_queue):
                 print("Did not get set user or server disconnected")
                 return False
         else:
-            print(f"User does not exist. Want to create a user?")
-            user_rsp = input("y/n? \nAnswer: ")
-            if user_rsp.lower() == "y":
-                new_user_protocol()
-            else:
-                print("Make a user to use this server.")
+            print("\nIncorrect username or password\n")
+            return False
+
     else:
         print("Did not receieve from server or some unexpected error happebned")
-        False
+        return False
 
-    return user
+    return [user, token]
 
 def status_check(client_socket, force_ping = False):
     for response in server_response_log:
@@ -152,9 +183,9 @@ def status_check(client_socket, force_ping = False):
     return True
     #ping
 
-def heartbeat(client_socket, stop):
+def heartbeat(client_socket, stop, token):
     while not stop.is_set():
-        msg = gen_message("ping", "ping", "heartbeat")
+        msg = gen_message("ping", "", "heartbeat", token)
         sent = send_to_server(client_socket, msg, True) 
         recieved = recieve_from_server(client_socket)
         if not sent and recieved:
@@ -179,13 +210,41 @@ def client(): #activates a client
         except Exception as e:
             print(f"Client did not connect: {e}\n")
             return
+
+        valid_action = False
+        joined = False
+        join_attempts = 3
+
+        while not valid_action:
+            login = input("Login or Register: ")
+            if login.lower() == "login":
+                joined = client_joined(client_sock)
+                if not joined:
+                    join_attempts -= 1
+                if joined or join_attempts == 0:
+                    valid_action = True    
+            elif login.lower() == "register":
+                joined = new_user_protocol(client_sock)
+                if not joined:
+                    join_attempts -= 1
+                if joined:
+                    valid_action = True
+            elif login.lower() == "exit":
+                valid_action = True
+
+        if joined:
+            user = joined[0]
+            token = joined[1]
+        else:
+            print("Unsuccesfull login")
+            client_sock.close()
+            return
         
         stop_event = threading.Event()
-        heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event), daemon=True)
+        heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event, token), daemon=True)
         heartbeat_thread.start()
         config["active_heartbeat"] = True
-        response_queue = ds.Queue()
-        user = client_joined(client_sock, response_queue)
+    
         while True:
             status = status_check(client_sock)
             if status == False or config["active_heartbeat"] == False:
@@ -203,12 +262,12 @@ def client(): #activates a client
                 print(f"Goodbye {user}")
                 break
 
-            if ask == "ping":
-                msg_content = "ping"
-            else:
-                msg_content = input("Message to server: ")
+            inputs = input("How many inputs: ")
+            msg_content = []
+            for i in range(int(inputs)):
+                msg_content.append(input("Input: "))
 
-            msg = gen_message(ask, msg_content, "main")
+            msg = gen_message(ask, msg_content, "main", token)
             send_to_server(client_sock, msg)
             got_response = recieve_from_server(client_sock)
             if got_response:
@@ -222,7 +281,11 @@ def client(): #activates a client
 def main():
     client()
 
+auto_connect = False
+
 while run_terminal:
+    if auto_connect:
+        main()
     time.sleep(0.1)
     server_response_log = []    
 
