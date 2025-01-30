@@ -2,16 +2,24 @@
     "HOST": "127.0.0.1",
     "PORT": 12345,
     "run_server": true,
-    "user_capacity": 5,
+    "user_capacity": 100,
     "client_cmds": {
         "create_client": true
     },
-    "user_count": 0,
-    "function_keys":{
+    "user_count": 3,
+    "function_keys": {
         "veus": "verify_user",
         "ping": "ping",
         "set_user": "set_client",
-        "kill_server": "kill_server"
+        "kill_server": "kill_server",
+        "create_user": "create_user",
+        "change_permission_level": "change_persmission_level",
+        "show_online_users": "show_online_users",
+        "message_user": "message_user"
     },
-    "heartbeat_time": 0
+    "heartbeat_time": 0,
+    "access_level": {
+        "change_to_admin": ["admin"],
+        "change_to_basic": ["admin"]
+    }
 }

@@ -3,12 +3,12 @@ class Queue:
         self.queue = []
 
     def Pop(self):
-        if len(self.queue) >= 1:
+        if len(self.queue) > 0:
             x = self.queue[0]
             self.queue.pop(0)
             return x
-        return None
-    
+        return
+        
     def Push(self, Input):
         self.queue.append(Input)
 
