@@ -48,7 +48,28 @@ recieve_timeout = 5
 standby_time = 60*3
 timeout = 15
 user_profiles = {}
+online_users = {}
 #all functrions created must have an id passed
+async def message_user(loop, data, tag, token):
+    try:
+        user = data[0]
+        msg = data[1]
+        if user in online_users:
+            client_socket = online_users[user]
+        else:
+            return "user is not online"
+        
+        response = json.dumps({"data": [msg, "chat"]}) + "\n"
+        await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), recieve_timeout)
+        return f"Sent message to {user}"
+    
+    except asyncio.TimeoutError:
+        print("Socket timout, could not send or recieve in time")
+        return "Did not send message"
+    
+    except Exception as e:
+        print(f"could not recieve or send back to client or error with provided data {e}")
+        return "Did nto send message"
 
 def change_persmission_level(data, token):
     try: #checks if data is given in the right way
@@ -86,6 +107,16 @@ def kill_server(msg, token):
         else:
             return "Not high enough access level"
     return "Unverfied token"
+
+def show_online_users(msg, token):
+    payload = get_user_profile(token)
+    if payload:
+        users = ""
+        for user in online_users:
+            users+=user+"  "
+        return users
+    else:
+        return "invalid token"
 
 def update_users_count(amount = 1):
     config["user_count"] += amount
@@ -134,7 +165,7 @@ def set_client(userdata)    : #only used when a client joins! profile contains s
         print(f"invalid userdata {user} {sock} {e}")
         return False
     
-    if not user in user_profiles:
+    if not user in online_users:
         id = utils.gen_user_id()
         token = utils.generate_token(id)
         payload = utils.validate_token(token)
@@ -149,10 +180,13 @@ def set_client(userdata)    : #only used when a client joins! profile contains s
             print(f"User: {user} connected to server")
             return token 
         print("Weird things happens with token")
+    print("User already logged in")
     return False
 
-async def safe_client_disconnect(client_socket, loop):
+async def safe_client_disconnect(client_socket, loop, username=False):
     response = "disconnect"
+    if username:
+        del online_users[username]
     try: 
         await loop.sock_sendall(client_socket, json.dumps(response).encode())
     except Exception as e:
@@ -180,7 +214,9 @@ async def client_recieve_handler(client_socket, loop, recieve_timout):
         
         if function in func_keys: 
             try:
-                if token: #function requires authentication
+                if function == "message_user":
+                    response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
+                elif token: #function requires authentication
                     response = str(globals()[func_keys[function]](msg, token)) 
                 else:
                     response = str(globals()[func_keys[function]](msg)) 
@@ -222,7 +258,10 @@ async def login(client_socket, loop):
         if verified[0] == "veus" and verified[1] == "1" or verified[0] == "create_user" and verified[1] == "1":
             setup = await client_recieve_handler(client_socket, loop, recieve_timeout)
             try: 
-                if setup[0] == "set_user" and setup[1]:
+                if setup[1] == "False":
+                    return False
+                
+                elif setup[0] == "set_user":
                     print("Login succesfull")
                     return setup[1]
             except Exception as e:
@@ -263,6 +302,8 @@ async def client_handler(client_socket):
     
     client_is_connected = True
     profile = get_user_profile(token)
+    username = profile["name"]
+    online_users[username] = client_socket
    
     while client_is_connected:
         if profile:
@@ -275,16 +316,16 @@ async def client_handler(client_socket):
             if profile["connection_error_count"] == 3:
                 print("Disconnected server to client")
                 client_is_connected = False
-                await safe_client_disconnect(client_socket, loop)
+                await safe_client_disconnect(client_socket, loop, username)
 
             if time.time() - profile["heartbeat"] > timeout:
                 print("Client timout! Have not recieved a ping for too long!")
                 client_is_connected = False
-                await safe_client_disconnect(client_socket, loop)  
+                await safe_client_disconnect(client_socket, loop, username)  
         else:
             print("Disconnected server to client, unrecognized session key or token")
             client_is_connected = False
-            await safe_client_disconnect(client_socket, loop)
+            await safe_client_disconnect(client_socket, loop, username)
 
         time.sleep(0.02)
 

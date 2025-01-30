@@ -2,6 +2,7 @@ import socket
 import asyncio
 import json
 import time
+import os
 import threading
 import datastructures as ds
 
@@ -9,6 +10,7 @@ HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 12345  # The port used by the server
 
 config_path = "client/client_config.json" #incase path changes
+chat_path = "client/chats.json"
 run_terminal = True
 HEARTBEAT_INTERVAL = 5
 short_lived_client = True
@@ -17,7 +19,8 @@ server_response_log = []
 receieve_queue = { #tag associated with where message has associated function
     "heartbeat": ds.Queue(),
     "join_protocol": ds.Queue(),
-    "main": ds.Queue()
+    "main": ds.Queue(),
+    "chat": ds.Queue()
 }
 
 #load paths
@@ -32,6 +35,18 @@ except PermissionError:
     print(f"Error: Permission denied while accessing '{config_path}'.")
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
+try: #attempt fetching configs
+    with open(chat_path, 'r') as file:
+        chat = json.load(file)
+except FileNotFoundError:
+    print(f"Error: The file '{chat_path}' does not exist.")
+except json.JSONDecodeError:
+    print(f"Error: The file '{chat_path}' contains invalid JSON.")
+except PermissionError:
+    print(f"Error: Permission denied while accessing '{chat_path}'.")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
+
 
 def send_to_server(client_sock, msg, supress = False):
     if type(msg) is dict:
@@ -47,16 +62,20 @@ def send_to_server(client_sock, msg, supress = False):
         if not supress:
             print("Invalid message format, please send as dictionary")
 
-def recieve_from_server(client_sock, expected_tag=None):
+def recieve_from_server(client_sock, expected_tag=None, supress=False, chat_rec=False, origin=False):
     try:
         data = client_sock.recv(1024)
     except Exception as e:
-        add_to_response_log(None)
-        print(f"Could not recieve from server: {e}\n")
+        if not chat_rec:
+            add_to_response_log(None)
+        if not supress:
+            print(f"Could not recieve from server: {e} | {origin}\n")
         return None
     except socket.timeout():
-        add_to_response_log(None)
-        print("Timed out trying to receieve from server")
+        if not chat_rec:
+            add_to_response_log(None)
+        if not supress:
+             print(f"Timed out trying to receieve from server| {origin}")
         return None
     
     buffer = data.decode()
@@ -75,7 +94,7 @@ def recieve_from_server(client_sock, expected_tag=None):
                     expected_tag[1] += 1
                     recieve_from_server(client_sock, expected_tag)
         else:
-            print(f"invalid tag {tag}")
+            print(f"invalid tag {tag} {content}")
             return False
         
         return True
@@ -143,7 +162,7 @@ def client_joined(client_sock):
             got_response = recieve_from_server(client_sock, ["join_protocol", 0])
             if got_response:
                 token = receieve_queue["join_protocol"].Pop()
-                if token:
+                if token != "False":
                     print(f"Welcome back {user}")
                 else:
                     print("Could not set up server profile, profile may already be setup")
@@ -162,7 +181,7 @@ def client_joined(client_sock):
 
     return [user, token]
 
-def status_check(client_socket, force_ping = False):
+def status_check(client_socket, token, force_ping = False):
     for response in server_response_log:
         if response == "disconnect":
             print("Warning: server disconnected client")
@@ -170,7 +189,7 @@ def status_check(client_socket, force_ping = False):
         
         if response == None or force_ping == True: #ping server
             for i in range(3):
-                msg = gen_message("ping", "ping")
+                msg = gen_message("ping", "ping", "heartbeat", token)
                 connection = send_to_server(client_socket, msg, True)
                 if connection:
                     if recieve_from_server(client_socket) == "pong":
@@ -198,6 +217,18 @@ def heartbeat(client_socket, stop, token):
         else:
             receieve_queue["heartbeat"].Pop()
         time.sleep(HEARTBEAT_INTERVAL)
+
+def get_incoming_messages(client_socket, stop):
+    os.system("start cmd /K python C:/Users/LAB/Documents/super-server-project/client/chat.py")
+    while not stop.is_set():
+        recieved = recieve_from_server(client_socket, None, True, True, "chat")
+        if recieved:
+            message = receieve_queue["chat"].Pop()
+            chat["messages"].append(message)
+            with open(chat_path, "w") as file:
+                json.dump(chat, file, indent=4) 
+
+        time.sleep(0.2)
     
 def client(): #activates a client
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_sock:
@@ -209,7 +240,7 @@ def client(): #activates a client
             print("Client timeout: attempted connecting for too long")
         except Exception as e:
             print(f"Client did not connect: {e}\n")
-            return
+            return  
 
         valid_action = False
         joined = False
@@ -243,10 +274,13 @@ def client(): #activates a client
         stop_event = threading.Event()
         heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event, token), daemon=True)
         heartbeat_thread.start()
+        stop_event_chat = threading.Event()
+        chat_thread = threading.Thread(target=get_incoming_messages, args=(client_sock, stop_event_chat), daemon=True)
         config["active_heartbeat"] = True
+        chatting = False
     
         while True:
-            status = status_check(client_sock)
+            status = status_check(client_sock, token)
             if status == False or config["active_heartbeat"] == False:
                 client_sock.close()
                 stop_event.set()
@@ -261,9 +295,19 @@ def client(): #activates a client
                 heartbeat_thread.join()  # Wait for the thread to finish
                 print(f"Goodbye {user}")
                 break
+            if ask == "chat" and chatting == False:
+                chat_thread.start()
+                chatting = True
+                continue
 
             inputs = input("How many inputs: ")
             msg_content = []
+            try: 
+                int(inputs)
+            except Exception as e:
+                print(e)
+                continue
+        
             for i in range(int(inputs)):
                 msg_content.append(input("Input: "))
 

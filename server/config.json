@@ -13,7 +13,9 @@
         "set_user": "set_client",
         "kill_server": "kill_server",
         "create_user": "create_user",
-        "change_permission_level": "change_persmission_level"
+        "change_permission_level": "change_persmission_level",
+        "show_online_users": "show_online_users",
+        "message_user": "message_user"
     },
     "heartbeat_time": 0,
     "access_level": {
