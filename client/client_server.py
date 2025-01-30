@@ -17,7 +17,8 @@ server_response_log = []
 receieve_queue = { #tag associated with where message has associated function
     "hearbeat": ds.Queue(),
     "join_protocol": ds.Queue(),
-    "main": ds.Queue()
+    "main": ds.Queue(),
+    "other": ds.Queue()
 }
 
 #load paths
@@ -32,6 +33,11 @@ except PermissionError:
     print(f"Error: Permission denied while accessing '{config_path}'.")
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
+
+def get_queue_content():
+    for tag in receieve_queue:
+        print(f"\n \tTag: {tag}")
+        print(receieve_queue[tag].queue)
 
 def send_to_server(client_sock, msg, supress = False):
     if type(msg) is dict:
@@ -56,18 +62,25 @@ def recieve_from_server(client_sock):
         add_to_response_log(None)
         return 
     except Exception as e:
+        add_to_response_log(None)
         print(f"Could not recieve from server: {e}\n")
         return None
     msg = json.loads(data.decode())
     content = msg["data"][0]
     add_to_response_log(content)
-    return content
+    tag = msg["data"][1]
+    if tag in receieve_queue:
+        receieve_queue[tag].Push(content)
+    else:
+        receieve_queue["other"].Push(content)
+    
+    return True
 
 def new_user_protocol():
     pass
 
-def gen_message(action="", data=""):
-    return {"action": action, "data":data}
+def gen_message(action="", data="", tag=""):
+    return {"action": action, "data":data, "tag": tag}
 
 def add_to_response_log(response):
     log_len = len(server_response_log)
@@ -79,15 +92,16 @@ def add_to_response_log(response):
 
 def client_joined(client_sock, r_queue):
     user = input("Username: ")
-    message = gen_message("veus", user)
+    message = gen_message("veus", user, "join_protocol")
     send_to_server(client_sock, message)
     response = recieve_from_server(client_sock)
-    
     if response:
+        response = receieve_queue["join_protocol"].Pop()
         if int(response) == 1:
-            msg = gen_message("set_user", user)
+            msg = gen_message("set_user", user, "join_protocol")
             send_to_server(client_sock, msg)
             response = recieve_from_server(client_sock)
+            receieve_queue["join_protocol"].Pop()
             if response:
                 print(f"Welcome back {user}")
             else:
@@ -128,7 +142,7 @@ def status_check(client_socket, force_ping = False):
 
 def heartbeat(client_socket, stop):
     while not stop.is_set():
-        msg = gen_message("ping", "ping")
+        msg = gen_message("ping", "ping", "heartbeat")
         if not send_to_server(client_socket, msg, True):
             print("Heartbeat failed. Server may be down.")
             stop.set()
@@ -163,11 +177,17 @@ def client(): #activates a client
               #  heartbeat_thread.join()  # Wait for the thread to finish
                 print(f"Disconnected client {user}, lost connection to server\n")
                 break
-
+            
             ask = input("Cmd: ")
-            msg = gen_message(ask, "ping")
+            if ask == "close":
+                client_sock.close()
+                print("Ending client")
+                break
+
+            msg = gen_message(ask, "ping", "main")
             send_to_server(client_sock, msg)
-            data = recieve_from_server(client_sock)
+            response = recieve_from_server(client_sock)
+            data = receieve_queue["main"].Pop()
             print(data)
             time.sleep(0.02)
       

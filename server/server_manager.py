@@ -3,6 +3,7 @@ import threading
 import asyncio
 import json
 import subprocess
+import os
 import time
 
 config_path = "server/config.json" #incase path changes
@@ -40,8 +41,8 @@ HOST = config["HOST"]
 PORT = config["PORT"]
 client_capacity = config["user_capacity"]
 func_keys = config["function_keys"]
-recieve_timout = 150
-timeout = 150
+recieve_timout = 7
+timeout = 18
 user_profiles = {}
 
 async def update_users_count():
@@ -57,14 +58,20 @@ def ping(msg):
     config["heartbeat_time"] = time.time()
     return "pong"
 
+def kill_server(args):
+    os._exit(0)
+
 def set_client(user):
-    user_profiles[user] = {}
-    user_profiles[user]["name"] = user
-    user_profiles[user]["connection_error_count"] = 0
-    return True
+    if user not in user_profiles:
+        user_profiles[user] = {}
+        user_profiles[user]["name"] = user
+        user_profiles[user]["connection_error_count"] = 0
+        return True
+    print("WARNING! user is already online!")
+    return False
 
 async def safe_client_disconnect(client_socket, loop):
-    response = "disconnect"
+    response = {"data": ["disconnect", "heartbeat"]}
     try: 
         await loop.sock_sendall(client_socket, json.dumps(response).encode())
     except Exception as e:
@@ -82,6 +89,7 @@ async def client_recieve_handler(client_socket, loop):
         try:
             function = data["action"]
             msg = data["data"]
+            tag = data["tag"]
          #   print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
         except Exception as e:
             print(msg, function)
@@ -95,12 +103,12 @@ async def client_recieve_handler(client_socket, loop):
                 print(f"Function is not a valid server request: {e}")
                 return False
         else:
-            response = {"data": ["invalid action"]}
+            response = {"data": ["invalid action", tag]}
             await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
             return True
 
         if response:
-            response = {"data": [response]}
+            response = {"data": [response, tag]}
             await asyncio.wait_for(loop.sock_sendall(client_socket, json.dumps(response).encode()), recieve_timout)
             return True
 
@@ -115,6 +123,7 @@ async def client_recieve_handler(client_socket, loop):
 async def client_handler(client_socket):
     loop = asyncio.get_event_loop()
     client_is_connected = True
+    config["heartbeat_time"] = time.time()
     lost_conn_counter = 0
     while client_is_connected:
         crh = await client_recieve_handler(client_socket, loop)
@@ -142,8 +151,6 @@ async def run_server():
         server_socket.setblocking(False)
         loop = asyncio.get_event_loop()
         print("Server spawned!!")
-        config["heartbeat_time"] = time.time()
-
         while config["run_server"]:
             try: 
                 client_socket, client_addr = await loop.sock_accept(server_socket)
