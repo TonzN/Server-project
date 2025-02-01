@@ -11,8 +11,8 @@ PORT = 12345  # The port used by the server
 
 config_path = "client/client_config.json" #incase path changes
 chat_path = "client/chats.json"
-run_terminal = True
-HEARTBEAT_INTERVAL = 5
+run_terminal = True #to keep mainloop while disconnected alive
+HEARTBEAT_INTERVAL = 5 #time in seconds before a new heartbeat
 short_lived_client = True
 
 server_response_log = []
@@ -51,6 +51,7 @@ except Exception as e:
 def send_to_server(client_sock, msg, supress = False):
     if type(msg) is dict:
         try:
+            """all messages must be json format"""
             client_sock.sendall(json.dumps(msg).encode())
             return True
         except Exception as e:
@@ -63,6 +64,7 @@ def send_to_server(client_sock, msg, supress = False):
             print("Invalid message format, please send as dictionary")
 
 def recieve_from_server(client_sock, expected_tag=None, supress=False, chat_rec=False, origin=False):
+    #masse tull
     try:
         data = client_sock.recv(1024)
     except Exception as e:
@@ -99,8 +101,8 @@ def recieve_from_server(client_sock, expected_tag=None, supress=False, chat_rec=
         
         return True
 
-def new_user_protocol(client_sock):
-    print("Create user")
+def new_user_protocol(client_sock): # for å lage en ny bruker
+    print("Create user\n")
     user = input("Username: ")
     password = input("Password: ")
     message = gen_message("create_user", {"username": user, "password": password}, "join_protocol")
@@ -138,7 +140,7 @@ def new_user_protocol(client_sock):
 def gen_message(action="", data="", tag="", token=None):
     return {"action": action, "data":data, "tag": tag, "token": token}
 
-def add_to_response_log(response):
+def add_to_response_log(response): #logger alle siste 5 meldingene mottat
     log_len = len(server_response_log)
     if log_len < 5:
         server_response_log.append(response)
@@ -146,22 +148,23 @@ def add_to_response_log(response):
         server_response_log.pop(0)
         server_response_log.append(response)
 
-def client_joined(client_sock):
+def client_joined(client_sock): #if the user is trying to login
+    """verify user expects a password and username sent together in a dictionary"""
     user = input("Username: ")
     password = input("Password: ")
-    message = gen_message("veus", {"username": user, "password": password}, "join_protocol")
-    send_to_server(client_sock, message)
+    #login sequence
+    message = gen_message("veus", {"username": user, "password": password}, "join_protocol") 
+    send_to_server(client_sock, message) #verify user
     got_response = recieve_from_server(client_sock, ["join_protocol", 0])
-    
-    if got_response:
+    if got_response: 
         response = receieve_queue["join_protocol"].Pop()
         if response == "1":
             message = {"user": user, "socket": str(client_sock)}
             msg = gen_message("set_user", message , "join_protocol")
-            send_to_server(client_sock, msg)
+            send_to_server(client_sock, msg) #setup user
             got_response = recieve_from_server(client_sock, ["join_protocol", 0])
             if got_response:
-                token = receieve_queue["join_protocol"].Pop()
+                token = receieve_queue["join_protocol"].Pop() #token gets sent to join protocol queue
                 if token != "False":
                     print(f"Welcome back {user}")
                 else:
@@ -181,9 +184,10 @@ def client_joined(client_sock):
 
     return [user, token]
 
-def status_check(client_socket, token, force_ping = False):
-    for response in server_response_log:
-        if response == "disconnect":
+def status_check(client_socket, token, force_ping = False): 
+    """client sided checks to see if the server is still up and if the client still has a connection"""
+    for response in server_response_log: #reponse log logs every recieved message
+        if response == "disconnect": #if theres a disconnect message it means the server disconnected the user
             print("Warning: server disconnected client")
             return False
         
@@ -199,10 +203,10 @@ def status_check(client_socket, token, force_ping = False):
             print("Could not ping server, no connection to server")
             return False
     
-    return True
+    return True #no errors
     #ping
 
-def heartbeat(client_socket, stop, token):
+def heartbeat(client_socket, stop, token): #threaded to not block the mainloop, this pings the server occasionally
     while not stop.is_set():
         msg = gen_message("ping", "", "heartbeat", token)
         sent = send_to_server(client_socket, msg, True) 
@@ -242,9 +246,9 @@ def client(): #activates a client
             print(f"Client did not connect: {e}\n")
             return  
 
-        valid_action = False
-        joined = False
-        join_attempts = 3
+        valid_action = False #to keep login sequence running
+        joined = False #to exit login sequence
+        join_attempts = 3 #this HAS to match what the server login attempts are
 
         while not valid_action:
             login = input("Login or Register: ")
@@ -274,8 +278,8 @@ def client(): #activates a client
         stop_event = threading.Event()
         heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event, token), daemon=True)
         heartbeat_thread.start()
-        stop_event_chat = threading.Event()
-        chat_thread = threading.Thread(target=get_incoming_messages, args=(client_sock, stop_event_chat), daemon=True)
+     #   stop_event_chat = threading.Event()
+      #  chat_thread = threading.Thread(target=get_incoming_messages, args=(client_sock, stop_event_chat), daemon=True)
         config["active_heartbeat"] = True
         chatting = False
     
@@ -295,10 +299,10 @@ def client(): #activates a client
                 heartbeat_thread.join()  # Wait for the thread to finish
                 print(f"Goodbye {user}")
                 break
-            if ask == "chat" and chatting == False:
-                chat_thread.start()
-                chatting = True
-                continue
+        #    if ask == "chat" and chatting == False:
+         #       chat_thread.start()
+          #      chatting = True
+            #     continue
 
             inputs = input("How many inputs: ")
             msg_content = []
@@ -310,6 +314,7 @@ def client(): #activates a client
         
             for i in range(int(inputs)):
                 msg_content.append(input("Input: "))
+      
 
             msg = gen_message(ask, msg_content, "main", token)
             send_to_server(client_sock, msg)
