@@ -17,7 +17,6 @@
         "show_online_users": "show_online_users",
         "message_user": "message_user"
     },
-    "heartbeat_time": 0,
     "access_level": {
         "change_to_admin": ["admin"],
         "change_to_basic": ["admin"]

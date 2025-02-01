@@ -11,8 +11,8 @@ PORT = 12345  # The port used by the server
 
 config_path = "client/client_config.json" #incase path changes
 chat_path = "client/chats.json"
-run_terminal = True #to keep mainloop while disconnected alive
-HEARTBEAT_INTERVAL = 5 #time in seconds before a new heartbeat
+run_terminal = True
+HEARTBEAT_INTERVAL = 5
 short_lived_client = True
 
 server_response_log = []
@@ -48,20 +48,11 @@ except Exception as e:
     print(f"An unexpected error occurred: {e}")
 
 
-def get_queue_content():
-    for tag in receieve_queue:
-        print(f"\n \tTag: {tag}")
-        print(receieve_queue[tag].queue)
-
 def send_to_server(client_sock, msg, supress = False):
     if type(msg) is dict:
         try:
-            """all messages must be json format"""
             client_sock.sendall(json.dumps(msg).encode())
             return True
-        except socket.timeout:
-            print("Socket timed out waiting for data.")
-            return
         except Exception as e:
             if not supress:
                 print(f"Could not send message to server {e}\n")
@@ -71,22 +62,18 @@ def send_to_server(client_sock, msg, supress = False):
         if not supress:
             print("Invalid message format, please send as dictionary")
 
-def recieve_from_server(client_sock, expected_tag=None, supress=False, chat_rec=False, origin=False):
-    #masse tull
+def recieve_from_server(client_sock, wait_for=5, expected_tag=None, supress=False, status_check=False, origin=False):
+    client_sock.settimeout(wait_for)
     try:
         data = client_sock.recv(1024)
-    except socket.timeout:
-        print("Socket timed out waiting for data.")
-        add_to_response_log(None)
-        return 
     except Exception as e:
-        if not chat_rec:
+        if not status_check:
             add_to_response_log(None)
         if not supress:
             print(f"Could not recieve from server: {e} | {origin}\n")
         return None
     except socket.timeout():
-        if not chat_rec:
+        if not status_check:
             add_to_response_log(None)
         if not supress:
              print(f"Timed out trying to receieve from server| {origin}")
@@ -103,18 +90,16 @@ def recieve_from_server(client_sock, expected_tag=None, supress=False, chat_rec=
 
         if tag in receieve_queue:
             receieve_queue[tag].Push(content)
-            if expected_tag: #incase heartbeat and some other receieve requests happens at the same time they may mistmatch, therefor it will call again
-                if expected_tag[0] != tag and expected_tag[1] < 3:
-                    expected_tag[1] += 1
-                    recieve_from_server(client_sock, expected_tag)
+            if tag == "chat":
+                get_incoming_messages()
         else:
             print(f"invalid tag {tag} {content}")
             return False
         
         return True
 
-def new_user_protocol(client_sock): # for å lage en ny bruker
-    print("Create user\n")
+def new_user_protocol(client_sock):
+    print("Create user")
     user = input("Username: ")
     password = input("Password: ")
     message = gen_message("create_user", {"username": user, "password": password}, "join_protocol")
@@ -152,7 +137,7 @@ def new_user_protocol(client_sock): # for å lage en ny bruker
 def gen_message(action="", data="", tag="", token=None):
     return {"action": action, "data":data, "tag": tag, "token": token}
 
-def add_to_response_log(response): #logger alle siste 5 meldingene mottat
+def add_to_response_log(response):
     log_len = len(server_response_log)
     if log_len < 5:
         server_response_log.append(response)
@@ -160,23 +145,22 @@ def add_to_response_log(response): #logger alle siste 5 meldingene mottat
         server_response_log.pop(0)
         server_response_log.append(response)
 
-def client_joined(client_sock): #if the user is trying to login
-    """verify user expects a password and username sent together in a dictionary"""
+def client_joined(client_sock):
     user = input("Username: ")
     password = input("Password: ")
-    #login sequence
-    message = gen_message("veus", {"username": user, "password": password}, "join_protocol") 
-    send_to_server(client_sock, message) #verify user
-    got_response = recieve_from_server(client_sock, ["join_protocol", 0])
-    if got_response: 
+    message = gen_message("veus", {"username": user, "password": password}, "join_protocol")
+    send_to_server(client_sock, message)
+    got_response = recieve_from_server(client_sock, 5, ["join_protocol", 0])
+    
+    if got_response:
         response = receieve_queue["join_protocol"].Pop()
         if response == "1":
             message = {"user": user, "socket": str(client_sock)}
             msg = gen_message("set_user", message , "join_protocol")
-            send_to_server(client_sock, msg) #setup user
-            got_response = recieve_from_server(client_sock, ["join_protocol", 0])
+            send_to_server(client_sock, msg)
+            got_response = recieve_from_server(client_sock, 5, ["join_protocol", 0])
             if got_response:
-                token = receieve_queue["join_protocol"].Pop() #token gets sent to join protocol queue
+                token = receieve_queue["join_protocol"].Pop()
                 if token != "False":
                     print(f"Welcome back {user}")
                 else:
@@ -196,10 +180,9 @@ def client_joined(client_sock): #if the user is trying to login
 
     return [user, token]
 
-def status_check(client_socket, token, force_ping = False): 
-    """client sided checks to see if the server is still up and if the client still has a connection"""
-    for response in server_response_log: #reponse log logs every recieved message
-        if response == "disconnect": #if theres a disconnect message it means the server disconnected the user
+def status_check(client_socket, token, force_ping = False):
+    for response in server_response_log:
+        if response == "disconnect":
             print("Warning: server disconnected client")
             return False
         
@@ -215,40 +198,49 @@ def status_check(client_socket, token, force_ping = False):
             print("Could not ping server, no connection to server")
             return False
     
-    return True #no errors
+    return True
     #ping
 
-def heartbeat(client_socket, stop, token): #threaded to not block the mainloop, this pings the server occasionally
+def heartbeat(client_socket, stop, token, rec_pause):
     while not stop.is_set():
         msg = gen_message("ping", "", "heartbeat", token)
+        rec_pause.clear()
         sent = send_to_server(client_socket, msg, True) 
         recieved = recieve_from_server(client_socket)
+        rec_pause.set()
         if not sent or not recieved:
             print("Heartbeat failed. Server may be down.")
+            print(f"sent: {sent} recieved {recieved}")
             stop.set()
+            rec_pause.clear()
             status = status_check(client_socket, True)
             if not status:
                 config["active_heartbeat"] = False
                 break
+            rec_pause.set()
         else:
             receieve_queue["heartbeat"].Pop()
         time.sleep(HEARTBEAT_INTERVAL)
 
-def get_incoming_messages(client_socket, stop):
-    os.system("start cmd /K python C:/Users/LAB/Documents/super-server-project/client/chat.py")
+def receive_thread(client_sock, stop, pause):
     while not stop.is_set():
-        recieved = recieve_from_server(client_socket, None, True, True, "chat")
-        if recieved:
-            message = receieve_queue["chat"].Pop()
-            chat["messages"].append(message)
-            with open(chat_path, "w") as file:
-                json.dump(chat, file, indent=4) 
+        pause.wait()
+        time.sleep(0.5)
+        recieve_from_server(client_sock, 0.2, None, True)
 
-        time.sleep(0.2)
+def get_incoming_messages():
+    message = receieve_queue["chat"].Pop()
+    chat["messages"].append(message)
+    with open(chat_path, "w") as file:
+        json.dump(chat, file, indent=4) 
+
+    time.sleep(0.2)
+
+def open_chat():
+    os.system("start cmd /K python C:/Users/LAB/Documents/super-server-project/client/chat.py")
     
 def client(): #activates a client
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_sock:
-        client_sock.settimeout(5)
         try:
             client_sock.connect((HOST, PORT))
             print(f"Client connected.\n")
@@ -258,9 +250,9 @@ def client(): #activates a client
             print(f"Client did not connect: {e}\n")
             return  
 
-        valid_action = False #to keep login sequence running
-        joined = False #to exit login sequence
-        join_attempts = 3 #this HAS to match what the server login attempts are
+        valid_action = False
+        joined = False
+        join_attempts = 3
 
         while not valid_action:
             login = input("Login or Register: ")
@@ -287,23 +279,28 @@ def client(): #activates a client
             client_sock.close()
             return
         
+        rec_stop = threading.Event()
+        rec_pause = threading.Event()
+        rec_pause.set()
+        rec_thread = threading.Thread(target=receive_thread, args=(client_sock, rec_stop, rec_pause), daemon=True)
+        rec_thread.start()
         stop_event = threading.Event()
-        heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event, token), daemon=True)
+        heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event, token, rec_pause), daemon=True)
         heartbeat_thread.start()
-     #   stop_event_chat = threading.Event()
-      #  chat_thread = threading.Thread(target=get_incoming_messages, args=(client_sock, stop_event_chat), daemon=True)
+       
         config["active_heartbeat"] = True
         chatting = False
     
         while True:
-            status = status_check(client_sock, token)
+           # status = status_check(client_sock, token)
+            status = True
             if status == False or config["active_heartbeat"] == False:
                 client_sock.close()
                 stop_event.set()
                 heartbeat_thread.join()  # Wait for the thread to finish
                 print(f"Disconnected client {user}, lost connection to server\n")
                 break
-            
+
             ask = input("Cmd: ")
             if ask == "exit":
                 client_sock.close()
@@ -311,10 +308,10 @@ def client(): #activates a client
                 heartbeat_thread.join()  # Wait for the thread to finish
                 print(f"Goodbye {user}")
                 break
-        #    if ask == "chat" and chatting == False:
-         #       chat_thread.start()
-          #      chatting = True
-            #     continue
+            if ask == "chat" and chatting == False:
+                open_chat()
+                chatting = True
+                continue
 
             inputs = input("How many inputs: ")
             msg_content = []
@@ -325,12 +322,16 @@ def client(): #activates a client
                 continue
         
             for i in range(int(inputs)):
-                msg_content.append(input("Input: "))
-      
+                inp = input("Input: ")
+                if inp == "exit_input":
+                    break
+                msg_content.append(inp)
 
             msg = gen_message(ask, msg_content, "main", token)
             send_to_server(client_sock, msg)
+            rec_pause.clear()
             got_response = recieve_from_server(client_sock)
+            rec_pause.set()
             if got_response:
                 print("Server response:", receieve_queue["main"].Pop())
                 
