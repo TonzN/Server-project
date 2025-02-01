@@ -89,6 +89,7 @@ def change_persmission_level(data, token):
                 return "access_level does not exist"
             if access_level in config["access_level"]["change_to_"+new_access_level]:
                 users[target_user]["permission_level"] = new_access_level
+                print("User {target_user} now as permission level {new_access_level}")
                 return "Success"
             else:
                 return "Not high enough access level to do this"
