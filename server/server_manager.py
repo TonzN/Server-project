@@ -101,8 +101,10 @@ def change_persmission_level(data, token):
 def kill_server(msg, token):
     user = get_user_profile(token)
     if user["id"]:
-        if users[user["name"]]["permission_level"] == "admin":
-            print(f"User {user["name"]}|{user["id"]} killed the server!!")
+        username = user["name"]
+        id  = user["id"]
+        if users[username]["permission_level"] == "admin":
+            print(f"User {username}#{id} killed the server!!")
             print(msg)
             os._exit(0)
         else:
@@ -188,7 +190,8 @@ def set_client(userdata)    : #only used when a client joins! profile contains s
 async def safe_client_disconnect(client_socket, loop, username=False):
     response = "disconnect"
     if username:
-        del online_users[username]
+        if username in online_users:
+            del online_users[username]
     try: 
         await loop.sock_sendall(client_socket, json.dumps(response).encode())
     except Exception as e:
