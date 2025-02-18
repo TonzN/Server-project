@@ -6,19 +6,25 @@
     "client_cmds": {
         "create_client": true
     },
-    "user_count": 3,
+    "user_count": 5,
     "function_keys": {
         "veus": "verify_user",
         "ping": "ping",
         "set_user": "set_client",
         "kill_server": "kill_server",
+        "get_id": "get_id",
+        "get_permission_level": "get_permission_level",
         "create_user": "create_user",
         "change_permission_level": "change_persmission_level",
         "show_online_users": "show_online_users",
         "message_user": "message_user"
     },
     "access_level": {
-        "change_to_admin": ["admin"],
-        "change_to_basic": ["admin"]
+        "change_to_admin": [
+            "admin"
+        ],
+        "change_to_basic": [
+            "admin"
+        ]
     }
 }

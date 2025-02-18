@@ -77,8 +77,9 @@ async def recieve_from_server(client_sock, wait_for=5, expected_tag=None, supres
         if tag in receieve_queue:
             receieve_queue[tag].put_nowait(content)
             receieve_events[tag].set()
-            receieve_events[tag].clear()
+            
             if tag == "chat":
+                receieve_events[tag].clear()
                 await get_incoming_messages()
         else:
             print(f"invalid tag {tag} {content}")
@@ -94,6 +95,7 @@ async def new_user_protocol(client_sock):
     send_to_server(client_sock, message)
     await asyncio.wait_for(asyncio.to_thread(receieve_events["join_protocol"].wait), timeout=5)
     response = await receieve_queue["join_protocol"].get()
+    receieve_events["join_protocol"].clear()
     if response:
         if response == "1":
             message = {"user": user, "socket": str(client_sock)}
@@ -101,6 +103,7 @@ async def new_user_protocol(client_sock):
             send_to_server(client_sock, msg)
             await asyncio.wait_for(asyncio.to_thread(receieve_events["join_protocol"].wait), timeout=5)
             token = await receieve_queue["join_protocol"].get()
+            receieve_events["join_protocol"].clear()
             if token:
                 print(f"Welcome {user}")
             else:
@@ -132,20 +135,18 @@ async def client_joined(client_sock):
     password = input("Password: ")
     message = gen_message("veus", {"username": user, "password": password}, "join_protocol")
     send_to_server(client_sock, message)
-    start = time.time()
     await asyncio.wait_for(asyncio.to_thread(receieve_events["join_protocol"].wait), timeout=5)
     response = await receieve_queue["join_protocol"].get()
-    print(time.time() - start)
+    receieve_events["join_protocol"].clear()
     
     if response:
         if response == "1":
             message = {"user": user, "socket": str(client_sock)}
             msg = gen_message("set_user", message , "join_protocol")
             send_to_server(client_sock, msg)
-            start = time.time()
             await asyncio.wait_for(asyncio.to_thread(receieve_events["join_protocol"].wait), timeout=5)
             token = await receieve_queue["join_protocol"].get()
-            print(time.time() - start)
+            receieve_events["join_protocol"].clear()
    
             if token != "False":
                 print(f"Welcome back {user}")
@@ -191,6 +192,7 @@ async def async_heartbeat(client_socket, stop, token):
         try:
             await asyncio.wait_for(asyncio.to_thread(receieve_events["heartbeat"].wait), timeout=5)
             recieved = await receieve_queue["heartbeat"].get()
+            receieve_events["heartbeat"].clear()
         except asyncio.TimeoutError:
             continue
             
@@ -212,14 +214,30 @@ def heartbeat(client_socket, stop, token):
     loop.run_until_complete(async_heartbeat(client_socket, stop, token))  # Run async function
     
 async def async_receive_thread(client_sock, stop):
+    counter = 0
     while not stop.is_set():
-        await recieve_from_server(client_sock, 1, None, True, True)
+        try:
+            await recieve_from_server(client_sock, 1, None, True, True)
+            counter = 0
+        except Exception as e:
+            counter += 1
+            if counter >= 3:
+                print(f"Error recieving with server, bad connection or server is down. {e}")
+                print("\n closing client")
+                stop.set()
+                return
+        
+        await asyncio.sleep(0.1)  # Allow checking the stop condition regularly
 
 def receive_thread(client_socket, stop):
     """cheesy solution to do async and threading"""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)  # Attach event loop to this thread
-    loop.run_until_complete(async_receive_thread(client_socket, stop))  # Run async function
+    try:
+        loop.run_until_complete(async_receive_thread(client_socket, stop))  # Run async function
+    finally:
+        loop.close()  # Make sure to close the event loop properly when done
+        return
 
 async def get_incoming_messages():
     message = await receieve_queue["chat"].get()
@@ -235,8 +253,20 @@ async def get_incoming_messages():
 
 def open_chat():
     path = chat_data["path"]
-    os.system(f"start cmd /K python C:/Users/Toni/Documents/min_server/client/chat.py {path}")
-    
+    os.system(f"start cmd /K python C:/Users/LAB/Documents/super-server-project/client/chat.py {path}")
+
+def safe_close(client_sock, recieve, rec_stop, heartbeat, heart_stop):
+    if recieve:
+        rec_stop.set()
+        print("waiting for recieve_thread to end")
+        recieve.join()  # Wait for the thread to finish
+    if heartbeat:
+        heart_stop.set()
+        print("waiting for heartbeat to end")
+        heartbeat.join()
+
+    client_sock.close()
+
 async def client(): #activates a client
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_sock:
         try:
@@ -284,14 +314,13 @@ async def client(): #activates a client
                 chat_data["chat"] = json.load(file)
         else:
             print("Unsuccesfull login")
-            client_sock.close()
+            safe_close(client_sock, rec_thread, rec_stop, None, None)
             return
       
         stop_event = threading.Event()
         heartbeat_thread = threading.Thread(target=heartbeat, args=(client_sock, stop_event, token), daemon=True)
         heartbeat_thread.start()
         
-       
         config["active_heartbeat"] = True
         chatting = False
     
@@ -299,17 +328,13 @@ async def client(): #activates a client
             #status = status_check(client_sock, token)
             status = True
             if status == False or config["active_heartbeat"] == False:
-                client_sock.close()
-                stop_event.set()
-                heartbeat_thread.join()  # Wait for the thread to finish
+                safe_close(client_sock, rec_thread, rec_stop, heartbeat_thread, stop_event)
                 print(f"Disconnected client {user}, lost connection to server\n")
                 break
 
             ask = input("Cmd: ")
-            if ask == "exit":
-                client_sock.close()
-                stop_event.set()
-                heartbeat_thread.join()  # Wait for the thread to finish
+            if ask == "exit" or rec_stop.is_set():
+                safe_close(client_sock, rec_thread, rec_stop, heartbeat_thread, stop_event)
                 print(f"Goodbye {user}")
                 break
             if ask == "chat" and chatting == False:
@@ -335,6 +360,7 @@ async def client(): #activates a client
             send_to_server(client_sock, msg)
             await asyncio.wait_for(asyncio.to_thread(receieve_events["main"].wait), timeout=5)
             response = await receieve_queue["main"].get()
+            receieve_events["main"].clear()
             if response:
                 print("Server response:", response)
                 

@@ -8,37 +8,7 @@ import os
 import jwt
 import datetime
 import server_utils as utils
-
-config_path = "server/config.json" #incase path changes
-users_path = "server/users.json"
-
-#load paths
-try: #attempt fetching configs
-    with open(config_path, 'r') as file:
-        config = json.load(file)
-        print("JSON file loaded successfully!")
-except FileNotFoundError:
-    print(f"Error: The file '{config_path}' does not exist.")
-except json.JSONDecodeError:
-    print(f"Error: The file '{config_path}' contains invalid JSON.")
-except PermissionError:
-    print(f"Error: Permission denied while accessing '{config_path}'.")
-except Exception as e:
-    print(f"An unexpected error occurred: {e}")
-
-try: #attempt fetching users
-    with open(users_path, 'r') as file:
-        users = json.load(file)
-        print("JSON file loaded successfully!")
-except FileNotFoundError:
-    print(f"Error: The file '{users_path}' does not exist.")
-except json.JSONDecodeError:
-    print(f"Error: The file '{users_path}' contains invalid JSON.")
-except PermissionError:
-    print(f"Error: Permission denied while accessing '{users_path}'.")
-except Exception as e:
-    print(f"An unexpected error occurred: {e}")
-
+from loads import *
 
 HOST = config["HOST"]
 PORT = config["PORT"]
@@ -89,7 +59,7 @@ def change_persmission_level(data, token):
                 return "access_level does not exist"
             if access_level in config["access_level"]["change_to_"+new_access_level]:
                 users[target_user]["permission_level"] = new_access_level
-                print("User {target_user} now has permission level {new_access_level}")
+                print(f"User {target_user} now has permission level {new_access_level}")
                 return "Success"
             else:
                 return "Not high enough access level to do this"
@@ -100,15 +70,33 @@ def change_persmission_level(data, token):
 
 def kill_server(msg, token):
     user = get_user_profile(token)
-    if user["id"]:
+    if user:
         username = user["name"]
-        id  = user["id"]
+        id = user["id"]
         if users[username]["permission_level"] == "admin":
             print(f"User {username}#{id} killed the server!!")
             print(msg)
             os._exit(0)
         else:
             return "Not high enough access level"
+    return "Unverfied token"
+
+def get_id(msg, token):
+    user = get_user_profile(token)
+    if user:
+        username = user["name"]
+        id  = user["id"]
+        return f"#{id}"
+    
+    return "Unverfied token"
+
+def get_permission_level(msg, token):
+    user = get_user_profile(token)
+    if user["id"]:
+        username = user["name"]
+        permission_level = users[username]["permission_level"]
+        return permission_level
+    
     return "Unverfied token"
 
 def show_online_users(msg, token):
@@ -169,7 +157,7 @@ def set_client(userdata)    : #only used when a client joins! profile contains s
         return False
     
     if not user in online_users: #prevents same user being connected from 2 sessions
-        id = utils.gen_user_id()
+        id = users[user]["id"]
         token = utils.generate_token(id)
         payload = utils.validate_token(token) 
         if payload: 
@@ -188,6 +176,9 @@ def set_client(userdata)    : #only used when a client joins! profile contains s
     return False
 
 async def safe_client_disconnect(client_socket, loop, username=False):
+    with open(users_path, 'w') as file:
+        json.dump(users, file, indent=4)
+        
     response = "disconnect"
     if username:
         if username in online_users:
