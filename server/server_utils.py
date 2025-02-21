@@ -34,10 +34,9 @@ def gen_user_id():
     config["user_count"]
     return id
 
-def generate_token(user_id):
+def generate_token():
     payload = {
     "session_key": str(uuid.uuid4()),
-    "user_id": user_id,  # Example user ID
     "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)  # Token expires in 1 hour
     }
     # Encode the token

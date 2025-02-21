@@ -118,10 +118,11 @@ def verify_user(user_data):
     try:
         username = user_data["username"]
         password = user_data["password"]
+        token = user_data["token"]
     except Exception as e:
         print("invalid data provided")
         return 0
-    if username in users:
+    if username in users and not get_user_profile(token):
         if utils.verify_password(users[username]["password"], password):
             return 1
     return 0
@@ -152,25 +153,25 @@ def set_client(userdata)    : #only used when a client joins! profile contains s
     try: 
         user = userdata["user"]
         sock = userdata["socket"]
+        token = userdata["token"]
     except Exception as e:
         print(f"invalid userdata {user} {sock} {e}")
         return False
     
     if not user in online_users: #prevents same user being connected from 2 sessions
-        id = users[user]["id"]
-        token = utils.generate_token(id)
         payload = utils.validate_token(token) 
         if payload: 
             """user profile manages a clients session data to keep it alive and info the server needs of the client, must not be sent to client"""
             session_key = payload["session_key"] #session key lets you access the users session profile, socket and username
             user_profiles[session_key] = {}
             user_profiles[session_key]["name"] = user 
-            user_profiles[session_key]["id"] = payload["user_id"]
+            user_profiles[session_key]["id"] = users[user]["id"]
             user_profiles[session_key]["connection_error_count"] = 0
             user_profiles[session_key]["heartbeat"] = time.time()
             user_profiles[session_key]["socket"] = sock
             print(f"User: {user} connected to server")
-            return token  #returns token to user, VERY important
+            return True 
+        
         print("Weird things happens with token") #if something wrong happens here debug the server utils
     print("User already logged in")
     return False
@@ -250,6 +251,20 @@ async def client_recieve_handler(client_socket, loop, recieve_timout):
         print(f"could not recieve or send back to client {e}")
         return "Lost client"
 
+async def send_to_user(client_socket, loop, message, tag, timeout):
+    try:
+        response = json.dumps({"data": [message, tag]}) + "\n"
+        await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), timeout)
+        return True
+
+    except asyncio.TimeoutError:
+        print("Socket timout, could not send or recieve in time")
+        return "Lost client"
+    
+    except Exception as e:
+        print(f"could not recieve or send back to client {e}")
+        return "Lost client"
+    
 async def login(client_socket, loop):
     """Manages login phase of clients attempting to login, login has 2 phases, it expects verify user to be called first
     or register, then the next call HAS to be set_user to generate a token, if these steps cant be followed login will fail and server
@@ -265,7 +280,7 @@ async def login(client_socket, loop):
                 
                 elif setup[0] == "set_user":
                     print("Login succesfull")
-                    return setup[1] #returns token so the client handler knows the token
+                    return True 
             except Exception as e:
                 print("Error: did not set client")
         print("USER NOT VERIFIED\n")
@@ -295,12 +310,18 @@ async def client_handler(client_socket):
     """Whenever you disconnect the client for whatever reason use safe client disconnect and await it since its async
     Login sequence HAS to go thru to make sure only registered users enters the main loop"""
     loop = asyncio.get_event_loop()
-    for attempts in range(3): #gives user 3 chances to login
-        token = await login(client_socket, loop)
-        if token:
-            break
+    token = utils.generate_token()
+    success = False
+    sent_token = await send_to_user(client_socket, loop, token, "join_protocol", 5)
+    if sent_token:
+        for attempts in range(3): #gives user 3 chances to login
+            success = await login(client_socket, loop)
+            if success:
+                break
+    else:
+        print("Did not send client token")
 
-    if not token:
+    if not success:
         print("Login failed")
         await safe_client_disconnect(client_socket, loop)
         return
