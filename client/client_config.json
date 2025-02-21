@@ -1,0 +1,11 @@
+{
+    "activate_heartbeat": false,
+    "deactivate_heartbeat": false,
+    "active_chat": true,
+    "token": false,
+    "username": false,
+    "login_attempts": 0,
+    "register_attempts": 0,
+    "successfull_login": false,
+    "client_sock": false
+}
