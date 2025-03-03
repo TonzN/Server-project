@@ -1,70 +1,10 @@
 from loads import *
 from client.loads import *
-import traceback
-import client.client_manager as client
-
+import client.client_manager2 as client
+from client.thread_manager import * 
 
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 12345  # The port used by the server
-
-def check_threads():
-    print("Active threads:", threading.enumerate())
-    list_running_coroutines()
-   # debug_stuck_coroutines()
-    check_zombie_threads()
-  #  dump_stuck_thread()
-
-def dump_stuck_thread():
-    for thread in threading.enumerate():
-        if thread.name.startswith("asyncio_"):
-            print(f"\n🔍 Debugging {thread.name}...")
-
-            for thread_id, frame in sys._current_frames().items():
-                if thread.ident == thread_id:
-                    print("🔍 Stack trace of stuck thread:")
-                    traceback.print_stack(frame)
-
-def check_zombie_threads():
-    for thread in threading.enumerate():
-        if thread.name.startswith("asyncio_") or thread.name.startswith("Thread-"):
-            print(f"⚠️ Possible zombie thread detected: {thread.name} (Alive: {thread.is_alive()})")
-
-def debug_stuck_coroutines():
-    try:
-        loop = asyncio.get_event_loop()
-        tasks = [task for task in asyncio.all_tasks() if not task.done()]
-    
-    except Exception as e:
-        return
-
-    if tasks:
-        print(f"⚠️ {len(tasks)} stuck coroutine(s) found:")
-        for task in tasks:
-            print(f" - {task.get_coro()} (State: {task._state})")
-
-    return tasks
-
-def list_running_coroutines():
-    try:
-        loop = asyncio.get_event_loop()
-        
-        tasks = [task for task in asyncio.all_tasks() if not task.done()]
-    except Exception as e:
-        print("no running courotines")
-        return
-    
-    print(f"⚠️ {len(tasks)} running coroutine(s) detected:")
-
-    for task in tasks:
-        coro = task.get_coro()  # Get coroutine object
-        print(f"🔹 Coroutine: {coro} (State: {task._state})")
-
-        # Extract where the coroutine was created
-        frames = traceback.extract_stack(coro.cr_frame)
-        print("🔍 Origin trace:")
-        for frame in frames[-5:]:  # Show last 5 calls
-            print(f"  📌 {frame.filename}:{frame.lineno} in {frame.name}")
-        print("-" * 50)
 
 class RemoteSignal(QThread):
     signal = pyqtSignal(dict)
@@ -88,25 +28,23 @@ class Client_thread(QThread):
                 print(f"Client did not connect: {e}\n")
                 return  
             
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
             try:
-                self.loop.run_until_complete(self.run_client(self.client_sock, self.login_signal))
+                self.run_client(self.client_sock, self.login_signal)
+
+            except Exception as e:
+                print(f"Error {e}")
+
             finally:
-                self.loop.close()
                 print("closed thread socket")
                 return
 
-    async def run_client(self, client_sock, login_signal):
+    def run_client(self, client_sock, login_signal):
         config["client_sock"] = client_sock
         self.rec_thread = threading.Thread(target=client.receive_thread, args=(client_sock, self.rec_stop), daemon=True)
         self.rec_thread.start()
-
+    
         try: 
-            await asyncio.wait_for(asyncio.to_thread(client.receieve_events["join_protocol"].wait), timeout=5)
-            token = await client.receieve_queue["join_protocol"].get()
-            client.receieve_events["join_protocol"].clear()
-            time.sleep(0.5) #artificial delay
+            token = client.receieve_queue["join_protocol"].get(timeout=1)
             
             if token:
                 login_signal.emit()
@@ -114,57 +52,28 @@ class Client_thread(QThread):
                 self.heartbeat_thread = threading.Thread(target=client.heartbeat, args=(client_sock, self.heart_stop, config["token"]), daemon=True)
                 self.heartbeat_thread.start()
               
-                await client.run_client(client_sock, self.heart_stop)
+                client.run_client(client_sock, self.heart_stop)
             else:
-                print("token invalid")     
-        except asyncio.TimeoutError:
-            print("Timout waiting for join_protocol")
-        
-        finally:
-            # Safely stop asyncio tasks
-            print("Shutting down asyncio tasks...")
-            loop = asyncio.get_event_loop()
+                print("token invalid")   
 
-            # Cancel all asyncio tasks
-            tasks = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
-            for task in tasks:
-                task.cancel()
-
-            # Wait for tasks to cancel properly
-            await asyncio.gather(*tasks, return_exceptions=True)
-            tasks = [task for task in asyncio.all_tasks() if not task.done()]
-            for task in tasks:
-                task.cancel()
-            print("All asyncio tasks cancelled.")
-
-            # If event loop is still running, stop it
-            if loop.is_running():
-                loop.stop()
-            print("Event loop stopped.")        
-            
+        except Exception as e:
+            print(f"heh {e}")
+            return
+             
     def stop(self):
         config["stop"] = True
         with open(config_path, "w") as file:
             json.dump(temp, file, indent=4)
 
-        client.receieve_events["main"].set()
-        client.receieve_events["heartbeat"].set()
-        client.receieve_events["join_protocol"].set()
         self.heart_stop.set()
         self.rec_stop.set()
+        self.quit()  # Request thread exit
+
         if self.rec_thread:
             self.rec_thread.join(timeout=1)
         if self.heartbeat_thread:
-            self.heartbeat_thread.join(timeout=1)
-    
-        for thread in threading.enumerate():
-            if thread.name.startswith("asyncio_"):
-                print(f"Force stopping {thread.name}...")
-                thread.join(timeout=1)  # Try to wait for it to stop
-                if thread.is_alive():
-                    print(f"Failed to stop {thread.name}, forcibly exiting.")
+            self.heartbeat_thread.join(timeout=3.6)
             
-        self.quit()  # Request thread exit
         if self.client_sock:
             try:
                 self.client_sock.close()
@@ -173,6 +82,8 @@ class Client_thread(QThread):
             print("closed sock")
             
         check_threads()
+        os.remove(config_path)
+        sys.exit(0)
             
 class Chat(QWidget):
     def __init__(self, parent=None):
@@ -205,8 +116,6 @@ class Chat(QWidget):
             print("invalid text or no selected user to dm")
 
     def add_message(self, data):
-        client.receieve_events["chat"].set()
-        client.receieve_events["chat"].clear()
         username = data["user"]
         message = data["message"]
         item_text = f"{username}: {message}"
@@ -288,7 +197,7 @@ class Window(QWidget):
         if config["login_attempts"] < 3:
             username = self.login_username.text()
             password = self.login_password.text()
-            joined = asyncio.run(client.client_joined(config["client_sock"], username, password, config["token"]))
+            joined = client.client_joined(config["client_sock"], username, password, config["token"])
             if joined == 1:
                 self.main_menu_layout()
             if not joined:

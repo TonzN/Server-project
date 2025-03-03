@@ -4,7 +4,6 @@ import asyncio
 import json
 import time
 import os
-import threading
 import random
 
 config_path = "client/client_config.json" #incase path changes
