@@ -1,8 +1,8 @@
 from loads import *
 from client.loads import *
-import app_manager
+import app_manager2 as app_manager
 import time
-import client.client_manager as client
+import client.client_manager2 as client
 
 
 if __name__ == "__main__":
@@ -10,8 +10,6 @@ if __name__ == "__main__":
     window = app_manager.Window()
     window.connectLayout()
     window.show()
-
+    
     sys.exit(app.exec())
-
-   
      
