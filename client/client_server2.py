@@ -130,30 +130,37 @@ def add_to_response_log(response):
         server_response_log.pop(0)
         server_response_log.append(response)
 
-async def client_joined(client_sock):
+async def client_joined(client_sock, token):
     user = input("Username: ")
     password = input("Password: ")
-    message = gen_message("veus", {"username": user, "password": password}, "join_protocol")
+    message = gen_message("veus", {"username": user, "password": password, "token": token}, "join_protocol")
     send_to_server(client_sock, message)
     await asyncio.wait_for(asyncio.to_thread(receieve_events["join_protocol"].wait), timeout=5)
     response = await receieve_queue["join_protocol"].get()
     receieve_events["join_protocol"].clear()
     
-    if response:
+    if response:    
         if response == "1":
-            message = {"user": user, "socket": str(client_sock)}
+            message = {"user": user, "socket": str(client_sock), "token": token}
             msg = gen_message("set_user", message , "join_protocol")
             send_to_server(client_sock, msg)
             await asyncio.wait_for(asyncio.to_thread(receieve_events["join_protocol"].wait), timeout=5)
-            token = await receieve_queue["join_protocol"].get()
+            success = await receieve_queue["join_protocol"].get()
             receieve_events["join_protocol"].clear()
    
-            if token != "False":
+            if success != "False":
                 print(f"Welcome back {user}")
+                config["username"] = user
+                config["successfull_login"] = True
+                config["activate_heartbeat"] = True
+                config["login_attempts"] = 0
+                return 1
             else:
                 print("Could not set up server profile, profile may already be setup or failed to receive token")
                 return False
-         
+        elif response == "2":
+            print("\n Client is already logged in, please logout before attempting to login with another user.")
+            return 2
         else:
             print("\nIncorrect username or password\n")
             return False
@@ -161,8 +168,6 @@ async def client_joined(client_sock):
     else:
         print("Did not receieve from server or some unexpected error happebned")
         return False
-
-    return [user, token]
 
 def status_check(client_socket, token, force_ping = False):
     for response in server_response_log:
