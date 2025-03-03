@@ -20,6 +20,35 @@ timeout = 15 #heartbeat timout time, if a user doesnt ping the server within thi
 user_profiles = {}
 online_users = {}
 #all functrions created must have an id passed
+groups = {"global"}
+
+async def message_group(loop, data, tag, token):
+    try:
+        profile = get_user_profile(token)
+        if profile:
+            group = data[0]
+            msg = data[1]
+            if group in groups:
+                if group == "global":
+                    for user in online_users:
+                        if user != profile["name"]:
+                            client_socket = online_users[user]
+                            response = json.dumps({"data": [{"user": "[global]"+profile["name"], "message": msg}, "chat"]}) + "\n"
+                            await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), recieve_timeout) #to send other users messages you need their socket
+                    return f"Sent message to {group}"
+            else:
+                return "invalid group"
+        else:
+            return "invalid token"
+    
+    except asyncio.TimeoutError:
+        print("Socket timout, could not send or recieve in time")
+        return "Did not send message"
+    
+    except Exception as e:
+        print(f"could not recieve or send back to group or error with provided data {e}")
+        return "Did not send message"
+
 async def message_user(loop, data, tag, token):
     try:
         profile = get_user_profile(token)
@@ -230,6 +259,8 @@ async def client_recieve_handler(client_socket, loop, recieve_timout):
         if function in func_keys:  #checks if action requested exist as something the client can call for
             try:
                 if function == "message_user": #functions with unique cases needs its own call
+                    response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
+                elif function == "message_group": #functions with unique cases needs its own call
                     response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
                 elif token: #function requires authentication
                     response = str(globals()[func_keys[function]](msg, token)) 

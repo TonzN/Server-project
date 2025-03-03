@@ -14,8 +14,8 @@ from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 import base64
 
-config_path = "server/config.json" #incase path changes
-users_path = "server/users.json"
+config_path = "server2/config.json" #incase path changes
+users_path = "server2/users.json"
 
 #load paths
 try: #attempt fetching configs
