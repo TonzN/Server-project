@@ -2,6 +2,7 @@ from loads import *
 from client.loads import *
 import client.client_manager2 as client
 from client.thread_manager import * 
+from  client.client_utils import *
 
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 12345  # The port used by the server
@@ -67,8 +68,6 @@ class Client_thread(QThread):
 
         self.heart_stop.set()
         self.rec_stop.set()
-        self.quit()  # Request thread exit
-
         if self.rec_thread:
             self.rec_thread.join(timeout=1)
         if self.heartbeat_thread:
@@ -83,7 +82,8 @@ class Client_thread(QThread):
             
         check_threads()
         os.remove(config_path)
-        sys.exit(0)
+        self.quit()  # Request thread exit
+        os._exit(0)
             
 class Chat(QWidget):
     def __init__(self, parent=None):
@@ -106,14 +106,22 @@ class Chat(QWidget):
     
     def send_message(self):
         message = self.input_field.text().strip()
-        user = config["selected_user"] 
-        if message and user:
-            self.add_message({"user": "you", "message": message})
-            msg = client.gen_message("message_user", [user, message], "chat", config["token"])
-            print(client.send_to_server(config["client_sock"], msg))
-            self.input_field.clear()
-        else:
-            print("invalid text or no selected user to dm")
+        if config["send_type"] == "user":
+            user = config["selected_user"] 
+            if message and user:
+                self.add_message({"user": "you", "message": message})
+                msg = client.gen_message("message_user", [user, message], "chat", config["token"])
+                client.send_to_server(config["client_sock"], msg)
+                self.input_field.clear()
+            else:
+                print("invalid text or no selected user to dm")
+        elif config["send_type"] == "group":
+            if config["selected_group"] != False:
+                if config["selected_group"] == "global":
+                    self.add_message({"user": "[global] you", "message": message})
+                    msg = client.gen_message("message_group", [config["selected_group"], message], "chat", config["token"])
+                    client.send_to_server(config["client_sock"], msg)
+                    self.input_field.clear()
 
     def add_message(self, data):
         username = data["user"]
@@ -128,18 +136,26 @@ class DropDownMenu(QWidget):
         super().__init__(parent)
         self.setWindowTitle("drop down menu")
         self.main_layout = QVBoxLayout(self)
+        self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.online_users = {}
         self.refresh_signal = RemoteSignal()
         self.refresh_signal.signal.connect(self.refresh)
         client.signals["refresh_menu_panel"] = self.refresh_signal.signal
         self.refresh_button = QPushButton("Refresh")
-        self.main_layout.addWidget(self.refresh_button)
-        self.refresh_button.clicked.connect(self.request_online_users)
+        # self.main_layout.addWidget(self.refresh_button)
+        create_group = QPushButton("Global chat")
+        create_group.clicked.connect(self.select_group)
+        self.main_layout.addWidget(create_group)
+        users_label = QLabel("Users")
+        self.main_layout.addWidget(users_label)
 
-    def request_online_users(self):
-        msg = client.gen_message("show_online_users", "refresh_menu_panel", "main", config["token"])
-        client.send_to_server(config["client_sock"], msg)
-    
+        self.refresh_button.clicked.connect(request_online_users)
+        client.heartbeat_functions["req_online_users"] = request_online_users
+
+    def select_group(self):
+        config["send_type"] = "group"
+        config["selected_group"] = "global"
+
     def refresh(self, data):
         users = data["data"]
         for user in users: #adds labels of users
@@ -157,6 +173,8 @@ class DropDownMenu(QWidget):
 
     def select_user(self):
         button = self.sender()
+        config["send_type"] = "user"
+        config["selected_group"] == False
         config["selected_user"] = button.property("user")
         
 class Window(QWidget):

@@ -9,5 +9,8 @@
     "login_attempts": 0,
     "register_attempts": 0,
     "successfull_login": false,
-    "client_sock": false
+    "client_sock": false,
+    "send_type": "user",
+    "selected_group": false
+
 }

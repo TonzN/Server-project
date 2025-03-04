@@ -3,12 +3,13 @@ import ast
 import queue
 import client.datastructures as ds
 from client.thread_manager import *
+from  client.client_utils import *
 
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 12345  # The port used by the server
 
 run_terminal = True
-HEARTBEAT_INTERVAL = 2.5
+HEARTBEAT_INTERVAL = 3
 short_lived_client = True
 
 server_response_log = []
@@ -27,6 +28,8 @@ chat_data = {
 
 signals = {
 }
+
+heartbeat_functions = {}
 
 def send_to_server(client_sock, msg, supress = False):
     if type(msg) is dict:
@@ -193,8 +196,8 @@ def async_heartbeat(client_socket, stop, token):
             return False
         return recieved
     
-    except TimeoutError:
-        return
+    except queue.Empty:
+        pass
             
 def heartbeat(client_socket, stop, token):
     """heartbeat function with a blocking function"""
@@ -203,20 +206,28 @@ def heartbeat(client_socket, stop, token):
     while not stop.is_set():
         if not stop.is_set() or config["stop"] == True:
             time.sleep(HEARTBEAT_INTERVAL/itr_count)
-            itr_count += 1
+            count += 1
             if  count >= itr_count:
                 count = 0
                 recieved = False
                 try:
+                    for func_key in heartbeat_functions:
+                        heartbeat_functions[func_key]()
+
+                except Exception as e:
+                    print(f"Error at heartbeat function {e} \n{func_key}")
+
+                try:
                     recieved = async_heartbeat(client_socket, stop, token)
 
                     if not recieved:
-                        print("Heartbeat failed. Server may be down.")
+                        print("Heartbeat fail")
                         print(f"recieved {recieved}")
                         status = status_check(client_socket, token, True)
 
                 except Exception as e:
                     print(f"Heartbeat: {e}")
+
     print("closing heartbeat")
                  
 def async_receive_thread(client_sock, stop):
