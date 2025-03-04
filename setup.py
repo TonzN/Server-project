@@ -6,10 +6,7 @@ setup(
     packages=["DevelopmentPackages"],
     install_requires=[
           'PyQt6',
-          "threading",
           "queue",
-          "ast",
-          "asyncio"
       ],
     zip_safe = False
 )
