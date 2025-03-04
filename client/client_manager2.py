@@ -5,7 +5,7 @@ import client.datastructures as ds
 from client.thread_manager import *
 from  client.client_utils import *
 
-HOST = "127.0.0.1"  # The server's hostname or IP address
+HOST = "localhost"  # The server's hostname or IP address
 PORT = 12345  # The port used by the server
 
 run_terminal = True
