@@ -256,7 +256,7 @@ class Window(QWidget):
         if config["register_attempts"] < 5:
             username = self.register_username.text()
             password = self.register_password.text()
-            joined = asyncio.run(client.new_user_protocol(config["client_sock"], username, password, config["token"]))
+            joined = client.new_user_protocol(config["client_sock"], username, password, config["token"])
             if joined == 1:
                 self.main_menu_layout()
             if not joined:

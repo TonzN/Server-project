@@ -92,7 +92,11 @@ def new_user_protocol(client_sock, user, password, token):
             message = {"user": user, "socket": str(client_sock), "token": token}
             msg = gen_message("set_user", message , "join_protocol")
             send_to_server(client_sock, msg)
-            success = receieve_queue["join_protocol"].get(timeout=1)
+            try:
+                success = receieve_queue["join_protocol"].get(timeout=1)
+            except queue.Empty:
+                return False
+            
             if success:
                 print(f"Welcome {user}")
                 config["username"] = user
