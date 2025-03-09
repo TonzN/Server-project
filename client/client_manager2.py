@@ -5,7 +5,7 @@ import client.datastructures as ds
 from client.thread_manager import *
 from  client.client_utils import *
 
-HOST = "localhost"  # The server's hostname or IP address
+HOST = "ws://0.0.0.0:8765"  # The server's hostname or IP address
 PORT = 12345  # The port used by the server
 
 run_terminal = True
@@ -13,6 +13,25 @@ HEARTBEAT_INTERVAL = 3
 short_lived_client = True
 
 server_response_log = []
+
+receieve_events = { #tag associated with where message has associated function
+    "heartbeat":     asyncio.Event(),
+    "join_protocol": asyncio.Event(),
+    "main":          asyncio.Event(),
+    "chat":          asyncio.Event(),
+    "status_check": asyncio.Event(),
+    "start_login": asyncio.Event(),
+    "start_register": asyncio.Event(),
+    "set_login_info": asyncio.Event(),
+    "send_message": asyncio.Event()
+}
+
+cross_comminication_queues = {
+    "password": queue.Queue(),
+    "username": queue.Queue(),
+    "chat_message": queue.Queue(),
+}
+
 receieve_queue = { #tag associated with where message has associated function
     "heartbeat":     queue.Queue(),
     "join_protocol": queue.Queue(),
@@ -31,10 +50,10 @@ signals = {
 
 heartbeat_functions = {}
 
-def send_to_server(client_sock, msg, supress = False):
+async def send_to_server(client_sock, msg, supress = False):
     if type(msg) is dict:
         try:
-            client_sock.sendall(json.dumps(msg).encode())
+            await client_sock.send(json.dumps(msg).encode())
             return True
         except Exception as e:
             if not supress:
@@ -45,10 +64,9 @@ def send_to_server(client_sock, msg, supress = False):
         if not supress:
             print("Invalid message format, please send as dictionary")
 
-def recieve_from_server(client_sock, wait_for=2, expected_tag=None, supress=False, no_status_check=False, origin=False):
-    client_sock.settimeout(wait_for)
+async def recieve_from_server(client_sock, wait_for=2, expected_tag=None, supress=False, no_status_check=False, origin=False):
     try:
-        data = client_sock.recv(1024)
+        data = await asyncio.wait_for(client_sock.recv(), timeout=wait_for)
     except Exception as e:
         if not no_status_check:
             add_to_response_log(None)
@@ -71,27 +89,34 @@ def recieve_from_server(client_sock, wait_for=2, expected_tag=None, supress=Fals
         tag = msg["data"][1]
         add_to_response_log(content)
 
-        if tag in receieve_queue:
-            receieve_queue[tag].put(content)
-            for match in signals:
-                if match == tag:
-                    signals[tag].emit(content)
-        else:
-            print(f"invalid tag {tag} {content}")
-            return False
-        
+        try:
+            if tag in receieve_queue:
+                receieve_events[tag].set()
+                receieve_queue[tag].put(content)
+                for match in signals:
+                    if match == tag and signals[match][1] == type(content):
+                        try:
+                            signals[tag][0].emit(content)
+                        except Exception as e:
+                            print(f"2: recieve from server error: {e}")
+            else:
+                print(f"invalid tag {tag} {content}")
+                return False
+        except Exception as e:
+            print(f"1: Recieve from server error: {e}")
+            
         return True
 
-def new_user_protocol(client_sock, user, password, token):
+async def new_user_protocol(client_sock, user, password, token):
     message = gen_message("create_user", {"username": user, "password": password, "token": token}, "join_protocol")
-    send_to_server(client_sock, message)
+    await send_to_server(client_sock, message)
     response = receieve_queue["join_protocol"].get(timeout=1)
 
     if response:
         if response == "1":
             message = {"user": user, "socket": str(client_sock), "token": token}
             msg = gen_message("set_user", message , "join_protocol")
-            send_to_server(client_sock, msg)
+            await send_to_server(client_sock, msg)
             try:
                 success = receieve_queue["join_protocol"].get(timeout=1)
             except queue.Empty:
@@ -125,22 +150,39 @@ def add_to_response_log(response):
         server_response_log.pop(0)
         server_response_log.append(response)
 
-def client_joined(client_sock, user, password, token):
+async def client_joined(client_sock, user, password, token):
+    print("started client joining")
     message = gen_message("veus", {"username": user, "password": password, "token": token}, "join_protocol")
-    send_to_server(client_sock, message)
+    await send_to_server(client_sock, message)
+    response = None
     try:
-        response = receieve_queue["join_protocol"].get(timeout=1)
+        if await recieve_from_server(client_sock, supress=True):
+            response = receieve_queue["join_protocol"].get(timeout=1)
+            client.receieve_events["join_protocol"].clear()
+    except asyncio.TimeoutError:
+        print("timout error")
+        return False
+    except queue.Empty:
+        print("empty queue")
+        return False
     except Exception as e:
+        print(f"{e}")
         return False
     
     if response:    
         if response == "1":
             message = {"user": user, "socket": str(client_sock), "token": token}
             msg = gen_message("set_user", message , "join_protocol")
-            send_to_server(client_sock, msg)
-            try:
-                success = receieve_queue["join_protocol"].get(timeout=1)
+            await send_to_server(client_sock, msg)
+            try:   
+                if await recieve_from_server(client_sock, supress=True):
+                    success = receieve_queue["join_protocol"].get(timeout=1)
+                    client.receieve_events["join_protocol"].clear()
 
+            except queue.Empty:
+                print("empty queue")
+                return False
+            
             except Exception as e:
                 return False  
    
@@ -164,7 +206,7 @@ def client_joined(client_sock, user, password, token):
         print("Did not receieve from server or some unexpected error happebned")
         return False
 
-def status_check(client_socket, token, force_ping = False):
+async def status_check(client_socket, token, force_ping = False):
     for response in server_response_log:
         if response == "disconnect":
             print("Warning: server disconnected client")
@@ -173,7 +215,7 @@ def status_check(client_socket, token, force_ping = False):
         if response == None or force_ping == True: #ping server
             for i in range(3):
                 msg = gen_message("ping", "", "status_check", token)
-                connection = send_to_server(client_socket, msg, True)
+                connection = await send_to_server(client_socket, msg, True)
                 if connection:
                     response = receieve_queue["status_check"].get(timeout=1)
                     if response:
@@ -184,110 +226,113 @@ def status_check(client_socket, token, force_ping = False):
             return False
     
     return True
-    #ping
+    #ping        
 
-def async_heartbeat(client_socket, stop, token):
+async def run_init(client_sock, login_signal):
+    received = await recieve_from_server(client_sock, supress=True)
+    token = None
+    if received:
+        token = receieve_queue["join_protocol"].get(timeout=2)
+        config["token"] = token
+        login_signal.emit()
+    return token
+
+async def run_login(client_sock, stop_event, token):
+    while not stop_event.is_set() and not receieve_events["set_login_info"].is_set():
+        time.sleep(0.3)
+    
+    user = cross_comminication_queues["username"].get()
+    password = cross_comminication_queues["password"].get()
+    joined = await client_joined(client_sock, user, password, token)
+
+    if not joined:
+        if config["login_attempts"] < 3:
+            config["login_attempts"] += 1
+            await run_login(client_sock, stop_event, token)
+            receieve_events["set_login_info"].clear()
+        else:
+            print("Used up all login attempts")
+
+async def heartbeat(client_sock):
     try:
-        msg = gen_message("ping", "", "heartbeat", token)
-        sent = send_to_server(client_socket, msg, True) 
+        msg = gen_message("ping", "", "heartbeat", config["token"])
+        sent = await send_to_server(client_sock, msg, True) 
     except Exception as e:
         print(f"Error at requesting ping from heartbeat {e}, sent: {sent}")
         return
     
     try:
-        recieved = receieve_queue["heartbeat"].get(timeout=1)
-        if not recieved:
+        response = await recieve_from_server(client_sock, wait_for=1, supress=True)
+        if response:
+            recieved = receieve_queue["heartbeat"].get()
+            if not recieved:
+                return False
+            return recieved
+        else:
             return False
-        return recieved
     
     except queue.Empty:
-        pass
-            
-def heartbeat(client_socket, stop, token):
-    """heartbeat function with a blocking function"""
-    itr_count = 5
-    count = 0
-    while not stop.is_set():
-        if not stop.is_set() or config["stop"] == True:
-            time.sleep(HEARTBEAT_INTERVAL/itr_count)
-            count += 1
-            if  count >= itr_count:
-                count = 0
-                recieved = False
-                try:
-                    for func_key in heartbeat_functions:
-                        heartbeat_functions[func_key]()
+        return False
 
-                except Exception as e:
-                    print(f"Error at heartbeat function {e} \n{func_key}")
+async def pulse_functions(client_socket):
+    try:
+        for funk_key in heartbeat_functions:
+            await heartbeat_functions[funk_key](client_socket)
+    except Exception as e:
+        print(f"Error at pulse function: {e}")
 
-                try:
-                    recieved = async_heartbeat(client_socket, stop, token)
-
-                    if not recieved:
-                        print("Heartbeat fail")
-                        print(f"recieved {recieved}")
-                        status = status_check(client_socket, token, True)
-
-                except Exception as e:
-                    print(f"Heartbeat: {e}")
-
-    print("closing heartbeat")
-                 
-def async_receive_thread(client_sock, stop):
-    counter = 0
-    while not stop.is_set():
-        try:
-            recieve_from_server(client_sock, 1, None, True, True)
-            counter = 0
-        except Exception as e:
-            counter += 1
-            if counter >= 10:
-                connected = status_check(client_sock, config["token"])
-                if not connected:
-                    print(f"Error recieving with server, bad connection or server is down. {e}")
-                    print("\n closing client")
-                    stop.set()
-                    return
-                else:
-                    counter = 0
+async def run_client_mainloop(client_sock, stop_event):
+    HEARTBEAT_TIME = time.time()
+    while not stop_event.is_set():
+        time.sleep(0.2)
+        if time.time() - HEARTBEAT_TIME >= HEARTBEAT_INTERVAL:
+            HEARTBEAT_TIME = time.time()
+            heartbeat_attempt = await heartbeat(client_sock)
+            await pulse_functions(client_sock)
+            if not heartbeat_attempt:
+                print("Unsuccesfull heartbeat")
         
-        time.sleep(0.1)
-    print("recieve ended")
+        if receieve_events["send_message"].is_set():
+            receieve_events["send_message"].clear()
+            msg = cross_comminication_queues["chat_message"].get(timeout=1)
+            await send_to_server(client_sock, msg, True)
+            print("sent message")
 
-def receive_thread(client_socket, stop):
-    """cheesy solution to do async and threading"""
-    async_receive_thread(client_socket, stop)
-    
-def run_client(client_sock, heartbeat_stop):
-    connected = True
-
-    while connected:
-
-        if heartbeat_stop.is_set() or config["stop"] == True:
-            connected = False
-            return
-
-        if config["successfull_login"]:   
-            try:
-                recieved = receieve_queue["main"].get(timeout=1)
-                if not recieved:
-                    continue
-
-            except queue.Empty:
-                continue
-
-            except Exception as e:
-                print(f"{e}")
-                return
-            
-            try:
-                recieved = ast.literal_eval(recieved)
-            except:
-                continue
-
+        try:
+            recieved = False
+            recieved = await recieve_from_server(client_sock, wait_for=1, supress=True)
             if recieved:
-                if recieved["signal"] in signals:
-                    signals[recieved["signal"]].emit(recieved["data"])
+                recieved = receieve_queue["main"].get(timeout=0.5)
 
-        time.sleep(0.25)
+            if not recieved:
+                continue
+        
+        except queue.Empty:
+            continue 
+
+        except Exception as e:
+            print(f"Mainloop error: {e}")
+        
+        try:
+            recieved = ast.literal_eval(recieved)
+        except:
+            continue
+
+        if recieved:
+            if recieved["signal"] in signals:   
+                if type(recieved["data"]) == signals[recieved["signal"]][1]:
+                    signals[recieved["signal"]][0].emit(recieved["data"])       
+            
+async def run_client(client_sock, login_signal, stop_event, main_menu_signal):
+    if not config["token"]:
+        token = await run_init(client_sock, login_signal)
+        if token:
+            await run_login(client_sock, stop_event, token)
+        else:
+            print("did not fetch token")
+
+    if config["successfull_login"]:
+        main_menu_signal.emit()
+        await run_client_mainloop(client_sock, stop_event)
+
+ 
