@@ -3,8 +3,9 @@ from client.loads import *
 import client.client_manager2 as client
 from client.thread_manager import * 
 from  client.client_utils import *
+import websockets
 
-HOST = "localhost"  # The server's hostname or IP address
+HOST = "wss://wss.vocatus.no:443" # The server's hostname or IP address
 PORT = 12345  # The port used by the server
 
 class RemoteSignal(QThread):
@@ -12,55 +13,38 @@ class RemoteSignal(QThread):
 
 class Client_thread(QThread):
     login_signal = pyqtSignal()
+    main_menu_signal = pyqtSignal()
     rec_stop = None
     heart_stop = None
     rec_thread = None
+    client_sock = None
     heartbeat_thread = None
+
+    async def async_run(self):
+        try:
+            async with websockets.connect(HOST) as self.client_sock: 
+                print("Client connected")
+                try:
+                    await client.run_client(self.client_sock, self.login_signal, self.rec_stop, self.main_menu_signal)
+
+                except Exception as e:
+                    print(f"Error {e}")
+
+                finally:
+                    print("closed thread socket")
+                    return
+                
+        except Exception as e:
+            print(f"Client did not connect {e}")
     
     def run(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.client_sock:
-            try:
-                self.client_sock.connect((HOST, PORT))
-                print(f"Client connected.\n")
-            except socket.timeout:
-                print("Client timeout: attempted connecting for too long")
-                return
-            except Exception as e:
-                print(f"Client did not connect: {e}\n")
-                return  
-            
-            try:
-                self.run_client(self.client_sock, self.login_signal)
-
-            except Exception as e:
-                print(f"Error {e}")
-
-            finally:
-                print("closed thread socket")
-                return
-
-    def run_client(self, client_sock, login_signal):
-        config["client_sock"] = client_sock
-        self.rec_thread = threading.Thread(target=client.receive_thread, args=(client_sock, self.rec_stop), daemon=True)
-        self.rec_thread.start()
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_until_complete(self.async_run())
     
-        try: 
-            token = client.receieve_queue["join_protocol"].get(timeout=1)
-            
-            if token:
-                login_signal.emit()
-                config["token"] = token
-                self.heartbeat_thread = threading.Thread(target=client.heartbeat, args=(client_sock, self.heart_stop, config["token"]), daemon=True)
-                self.heartbeat_thread.start()
-              
-                client.run_client(client_sock, self.heart_stop)
-            else:
-                print("token invalid")   
+    async def end_socket(self):
+        await self.client_sock.close()
 
-        except Exception as e:
-            print(f"heh {e}")
-            return
-             
     def stop(self):
         config["stop"] = True
         with open(config_path, "w") as file:
@@ -75,7 +59,8 @@ class Client_thread(QThread):
             
         if self.client_sock:
             try:
-                self.client_sock.close()
+                self.loop.call_soon_threadsafe(asyncio.create_task, self.end_socket())
+                
             except Exception as e:
                 print(f"error closing socket {e}")
             print("closed sock")
@@ -111,7 +96,8 @@ class Chat(QWidget):
             if message and user:
                 self.add_message({"user": "you", "message": message})
                 msg = client.gen_message("message_user", [user, message], "chat", config["token"])
-                client.send_to_server(config["client_sock"], msg)
+                client.cross_comminication_queues["chat_message"].put_nowait(msg)
+                client.receieve_events["send_message"].set()
                 self.input_field.clear()
             else:
                 print("invalid text or no selected user to dm")
@@ -120,7 +106,8 @@ class Chat(QWidget):
                 if config["selected_group"] == "global":
                     self.add_message({"user": "[global] you", "message": message})
                     msg = client.gen_message("message_group", [config["selected_group"], message], "chat", config["token"])
-                    client.send_to_server(config["client_sock"], msg)
+                    client.cross_comminication_queues["chat_message"].put_nowait(msg)
+                    client.receieve_events["send_message"].set()
                     self.input_field.clear()
 
     def add_message(self, data):
@@ -140,7 +127,7 @@ class DropDownMenu(QWidget):
         self.online_users = {}
         self.refresh_signal = RemoteSignal()
         self.refresh_signal.signal.connect(self.refresh)
-        client.signals["refresh_menu_panel"] = self.refresh_signal.signal
+        client.signals["refresh_menu_panel"] = [self.refresh_signal.signal, dict]
         self.refresh_button = QPushButton("Refresh")
         # self.main_layout.addWidget(self.refresh_button)
         create_group = QPushButton("Global chat")
@@ -207,19 +194,16 @@ class Window(QWidget):
 
         self.incoming_message_signal = RemoteSignal()
         self.incoming_message_signal.signal.connect(self.main_chat.add_message)
-        client.signals["chat"] = self.incoming_message_signal.signal
+        client.signals["chat"] = [self.incoming_message_signal.signal, dict]
        
         self.update_ui()
 
     def login(self):
-        if config["login_attempts"] < 3:
-            username = self.login_username.text()
-            password = self.login_password.text()
-            joined = client.client_joined(config["client_sock"], username, password, config["token"])
-            if joined == 1:
-                self.main_menu_layout()
-            if not joined:
-                config["login_attempts"] += 1
+        username = self.login_username.text()
+        password = self.login_password.text()
+        client.cross_comminication_queues["username"].put_nowait(username)
+        client.cross_comminication_queues["password"].put_nowait(password)
+        client.receieve_events["set_login_info"].set()
 
     def login_menu_layout(self):
         self.clearLayout()
@@ -256,7 +240,7 @@ class Window(QWidget):
         if config["register_attempts"] < 5:
             username = self.register_username.text()
             password = self.register_password.text()
-            joined = client.new_user_protocol(config["client_sock"], username, password, config["token"])
+            joined = asyncio.run(client.new_user_protocol(config["client_sock"], username, password, config["token"]))
             if joined == 1:
                 self.main_menu_layout()
             if not joined:
@@ -350,4 +334,5 @@ class Window(QWidget):
         self.appThread.rec_stop = self.rec_stop
         self.appThread.heart_stop = self.heart_stop
         self.appThread.login_signal.connect(self.loginLayout)
+        self.appThread.main_menu_signal.connect(self.main_menu_layout)
         self.appThread.start()
