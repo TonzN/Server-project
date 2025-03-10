@@ -177,11 +177,14 @@ def get_user_profile(token):
         return False
     
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
+    print(token)
     if token:
         user = get_user_profile(token)
+        print(user)
         if user:
             if msg == "ping":
                 print("ping")
+            print("updating client time")
             user["heartbeat"] = time.time()
             return "pong"
 
