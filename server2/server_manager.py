@@ -11,9 +11,9 @@ HOST = config["HOST"]
 PORT = config["PORT"]
 client_capacity = config["user_capacity"] #to not connect more users than you can handle
 func_keys = config["function_keys"]
-recieve_timeout = 5 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
+recieve_timeout = 9 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
 standby_time = 60*5 #time you allow someone to be trying to login
-timeout = 10 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
+timeout = 30 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
 user_profiles = {}
 online_users = {}
 #all functrions created must have an id passed
@@ -177,14 +177,11 @@ def get_user_profile(token):
         return False
     
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
-    print(token)
     if token:
         user = get_user_profile(token)
-        print(user)
         if user:
             if msg == "ping":
                 print("ping")
-            print("updating client time")
             user["heartbeat"] = time.time()
             return "pong"
 
