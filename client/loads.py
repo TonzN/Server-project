@@ -3,10 +3,21 @@ import socket
 import asyncio
 import json
 import time
+import sys
 import os
 import random
 
-config_path = "client/client_config.json" #incase path changes
+def get_config_path():
+    if getattr(sys, 'frozen', False):
+        # Running in a bundled executable
+        base_path = sys._MEIPASS
+    else:
+        # Running in a normal Python environment
+        base_path = os.path.dirname(__file__)
+
+    return os.path.join(base_path, 'client_config.json')
+
+config_path = get_config_path() #incase path changes
 
 try: #attempt fetching configs
     with open(config_path, 'r') as file:
