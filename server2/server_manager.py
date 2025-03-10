@@ -135,6 +135,7 @@ def show_online_users(msg, token):
     if payload:
         users = {"data": []}
         for user in online_users:
+            print(users)
             users["data"].append(user)
         return {"data": users, "signal": signal}
     else:
@@ -288,7 +289,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
             return function #returns function name back incase its needed
         
     except websockets.exceptions.ConnectionClosed:
-        print("user disconnect")
+        print("websocket.excpection lost connection")
         return "Client closed"
 
     except asyncio.TimeoutError:
@@ -393,14 +394,21 @@ async def client_handler(websocket, path=None):
     profile = get_user_profile(token) #fethes profile so the handler knows which user to pull from
     username = profile["name"]
     online_users[username] = websocket
+    buffer_attemps = 3
    
     while client_is_connected: #mainloop just makes sure the client health is safe and the recieve handler is called
         if profile:
             crh = await client_recieve_handler(websocket, loop, recieve_timeout)
             if crh == "Client closed":
+                buffer_attemps -= 1
+            else:
+                buffer_attemps = 3
+            if buffer_attemps <= 0:
                 client_is_connected = False
                 await safe_client_disconnect(websocket, loop, username, token)
-            if time.time() - profile["heartbeat"] > timeout:
+                print(f"Disconnecting {username}")
+
+            if time.time() - profile["heartbeat"] >= timeout:
                 print("Client timout! Have not recieved a ping for too long!")
                 client_is_connected = False
                 await safe_client_disconnect(websocket, loop, username, token)  
@@ -409,7 +417,7 @@ async def client_handler(websocket, path=None):
             client_is_connected = False
             await safe_client_disconnect(websocket, loop, username, token)
 
-        time.sleep(0.02) #small delay of 20ms to not exhaust the system
+        time.sleep(0.05) #small delay of 20ms to not exhaust the system
 
 async def run_server():
     """Starts the WebSocket server."""
