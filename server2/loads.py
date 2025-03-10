@@ -1,5 +1,4 @@
 import json
-import socket
 from argon2 import PasswordHasher 
 import uuid
 import time

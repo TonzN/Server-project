@@ -1,12 +1,12 @@
 {
-    "HOST": "127.0.0.1",
-    "PORT": 12345,
+    "HOST": "0.0.0.0",
+    "PORT": 8765,
     "run_server": true,
     "user_capacity": 100,
     "client_cmds": {
         "create_client": true
     },
-    "user_count": 6,
+    "user_count": 9,
     "function_keys": {
         "veus": "verify_user",
         "ping": "ping",
@@ -28,15 +28,28 @@
             "admin"
         ],
         "levels": {
-            "admin": {"min_security": "high", "hiearchy": 1},
-            "basic": {"min_security": "low", "hiearchy": 5}
+            "admin": {
+                "min_security": "high",
+                "hiearchy": 1
+            },
+            "basic": {
+                "min_security": "low",
+                "hiearchy": 5
+            }
         }
     },
     "security_level": {
-        "low": {"access": "server"},
-        "normal": {"access": "basic"},
-        "high": {"access": "basic"},
-        "max": {"access": "admin"}
+        "low": {
+            "access": "server"
+        },
+        "normal": {
+            "access": "basic"
+        },
+        "high": {
+            "access": "basic"
+        },
+        "max": {
+            "access": "admin"
+        }
     }
-
 }
