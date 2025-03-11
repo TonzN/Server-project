@@ -418,9 +418,14 @@ async def client_handler(websocket, path=None):
 
         time.sleep(0.05) #small delay of 20ms to not exhaust the system
 
+async def process_request(path, request_headers):
+    if "Upgrade" not in request_headers or request_headers["Upgrade"].lower() != "websocket":
+        print(f"Rejected non-WebSocket request from: {request_headers.get('Host', 'Unknown')}")
+        return 400, [], b"WebSocket connection required\n"
+    
 async def run_server():
     """Starts the WebSocket server."""
-    server = await websockets.serve(client_handler, HOST, PORT)
+    server = await websockets.serve(client_handler, HOST, PORT, process_request=process_request)
     print(f"WebSocket Server running on ws://{HOST}:{PORT}")
     
     await server.wait_closed()  # Keeps server running
