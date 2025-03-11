@@ -136,7 +136,6 @@ def show_online_users(msg, token):
         users = {"data": []}
         for user in online_users:
             users["data"].append(user)
-        print(users)
         return {"data": users, "signal": signal}
     else:
         return "invalid token"
