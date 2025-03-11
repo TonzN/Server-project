@@ -219,6 +219,7 @@ async def safe_client_disconnect(client_socket, loop, username, token):
     if username:
         if username in online_users:
             online_users[username] = None
+            del online_users[username]
     
     payload = utils.validate_token(token)
     if payload:
