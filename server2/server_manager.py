@@ -55,7 +55,7 @@ async def message_user(loop, data, tag, token):
             if user in online_users:
                 client_socket = online_users[user]
             else:
-                return "user is not online"
+                return f"{user} is not online"
             
             response = json.dumps({"data": [{"user": profile["name"], "message": msg}, "chat"]}) + "\n"
             await client_socket.send(response.encode()) #to send other users messages you need their socket
@@ -216,15 +216,9 @@ async def safe_client_disconnect(client_socket, loop, username, token):
     with open(users_path, 'w') as file:
         json.dump(users, file, indent=4)
         
-    response = "disconnect"
     if username:
         if username in online_users:
             online_users[username] = None
-            del online_users[username]
-    try: 
-        await client_socket.send(json.dumps(response).encode())
-    except Exception as e:
-        pass
     
     payload = utils.validate_token(token)
     if payload:
