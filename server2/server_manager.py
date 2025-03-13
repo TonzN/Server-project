@@ -6,6 +6,7 @@ import time
 import os
 import server_utils as utils
 from loads import *
+from message_manager import *
 
 HOST = config["HOST"]
 PORT = config["PORT"]
@@ -14,7 +15,9 @@ func_keys = config["function_keys"]
 recieve_timeout = 9 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
 standby_time = 60*5 #time you allow someone to be trying to login
 timeout = 30 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
-
+user_profiles = {}
+online_users = {}
+groups = {"global"}
 #all functrions created must have an id passed
 
 async def message_group(loop, data, tag, token):

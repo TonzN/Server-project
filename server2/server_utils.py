@@ -10,6 +10,28 @@ ph = PasswordHasher()
 
 blacklisted_tokens = {}
 client_keys = { }
+_user_profiles = {}
+_online_users = {}
+groups = {"global"}
+
+def get_user(user):
+    if user in _online_users:
+        return _online_users[user]
+    else:
+        return None
+
+def get_profile(key):
+    if key in _user_profiles[key]:
+        return _user_profiles[key]
+
+def add_user(user, user_profile):
+    pass
+
+def remove_user(user):
+    pass
+
+def add_profile(key):
+    pass
 
 def hash_password(password):
     """Hashes a password using Argon2."""

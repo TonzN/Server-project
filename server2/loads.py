@@ -15,9 +15,6 @@ import base64
 
 config_path = "server2/config.json" #incase path changes
 users_path = "server2/users.json"
-user_profiles = {}
-online_users = {}
-groups = {"global"}
 
 #load paths
 try: #attempt fetching configs
