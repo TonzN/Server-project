@@ -5,9 +5,14 @@
         "id": "00000",
         "permission_level": "basic",
         "chat_history": {
-            "Users": {},
-            "Groups": {}
-        }
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
     },
     "banana": {
         "username": "banana",
@@ -15,9 +20,14 @@
         "id": "00001",
         "permission_level": "admin",
         "chat_history": {
-            "Users": {},
-            "Groups": {}
-        }
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
     },
     "Toni": {
         "username": "Toni",
@@ -25,9 +35,14 @@
         "id": "00002",
         "permission_level": "admin",
         "chat_history": {
-            "Users": {},
-            "Groups": {}
-        }
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
     },
     "test2": {
         "username": "test2",
@@ -35,9 +50,14 @@
         "id": "00003",
         "permission_level": "basic",
         "chat_history": {
-            "Users": {},
-            "Groups": {}
-        }
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
     },
     "Macaroni": {
         "username": "Macaroni",
@@ -45,9 +65,14 @@
         "id": "00004",
         "permission_level": "basic",
         "chat_history": {
-            "Users": {},
-            "Groups": {}
-        }
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
     },
     "cisker": {
         "username": "cisker",
@@ -55,20 +80,43 @@
         "id": "00005",
         "permission_level": "basic",
         "chat_history": {
-            "Users": {},
-            "Groups": {}
-        }
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
     },
     "cisker2": {
         "username": "cisker2",
         "password": "$argon2id$v=19$m=65536,t=3,p=4$evxu2MMgkIbvrdSVW5wsYg$V8xq2dx2Ln71LsxaKjr9E9KxHTgYila+ZYyIeyAa1Hw",
         "id": "00007",
-        "permission_level": "basic"
+        "permission_level": "basic",
+        "chat_history": {
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
     },
     "EgElskarBarn123": {
         "username": "EgElskarBarn123",
         "password": "$argon2id$v=19$m=65536,t=3,p=4$mTZW8MiSBJ5FZfv5IOrATg$8IZUC056U/PjP3VEcvcgJ91p+sOKooNLhx8KlH3KusE",
         "id": "00008",
-        "permission_level": "basic"
+        "permission_level": "basic",
+        "chat_history": {
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
     }
 }

@@ -14,10 +14,8 @@ func_keys = config["function_keys"]
 recieve_timeout = 9 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
 standby_time = 60*5 #time you allow someone to be trying to login
 timeout = 30 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
-user_profiles = {}
-online_users = {}
+
 #all functrions created must have an id passed
-groups = {"global"}
 
 async def message_group(loop, data, tag, token):
     try:
@@ -346,6 +344,13 @@ def create_user(user_data): #userdata must be sent from the client as a dictiona
             users[username]["password"] = hashed_password
             users[username]["id"] = utils.gen_user_id()
             users[username]["permission_level"] = "basic"
+            users[username]["chat_history"] = {"global":[]}
+            users[username]["friends"] = {}
+            users[username]["groups"] = {}
+            users[username]["blacklist"] = {}
+            users[username]["securitymode"] = "normal"
+            users[username]["friend_requests"] = {}
+            users[username]["preferences"] = {}
             update_users_count() #this updates user count to make sure next generated id is unique
             with open(users_path, "w") as file: 
                 json.dump(users, file, indent=4)  #writes to users file
