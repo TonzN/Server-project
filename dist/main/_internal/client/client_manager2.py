@@ -23,6 +23,7 @@ receieve_events = { #tag associated with where message has associated function
     "start_login": asyncio.Event(),
     "start_register": asyncio.Event(),
     "set_login_info": asyncio.Event(),
+    "set_register_info": asyncio.Event(),
     "send_message": asyncio.Event()
 }
 
@@ -108,19 +109,42 @@ async def recieve_from_server(client_sock, wait_for=2, expected_tag=None, supres
         return True
 
 async def new_user_protocol(client_sock, user, password, token):
+    print("started registering")
     message = gen_message("create_user", {"username": user, "password": password, "token": token}, "join_protocol")
     await send_to_server(client_sock, message)
-    response = receieve_queue["join_protocol"].get(timeout=1)
+    response = None
+    try:
+        if await recieve_from_server(client_sock, supress=True):
+            response = receieve_queue["join_protocol"].get(timeout=1)
+            client.receieve_events["join_protocol"].clear()
+    except asyncio.TimeoutError:
+        print("timout error")
+        return False
+    except queue.Empty:
+        print("empty queue")
+        return False
+    except Exception as e:
+        print(f"{e}")
+        return False
+        
 
     if response:
         if response == "1":
             message = {"user": user, "socket": str(client_sock), "token": token}
             msg = gen_message("set_user", message , "join_protocol")
             await send_to_server(client_sock, msg)
-            try:
-                success = receieve_queue["join_protocol"].get(timeout=1)
+            success = None
+            try:   
+                if await recieve_from_server(client_sock, supress=True):
+                    success = receieve_queue["join_protocol"].get(timeout=1)
+                    client.receieve_events["join_protocol"].clear()
+
             except queue.Empty:
+                print("empty queue")
                 return False
+            
+            except Exception as e:
+                return False  
             
             if success:
                 print(f"Welcome {user}")
@@ -238,12 +262,15 @@ async def run_init(client_sock, login_signal):
     return token
 
 async def run_login(client_sock, stop_event, token):
-    while not stop_event.is_set() and not receieve_events["set_login_info"].is_set():
+    while not stop_event.is_set() and not receieve_events["set_login_info"].is_set() and receieve_events["set_register_info"].is_set():
         time.sleep(0.3)
     
     user = cross_comminication_queues["username"].get()
     password = cross_comminication_queues["password"].get()
-    joined = await client_joined(client_sock, user, password, token)
+    if receieve_events["set_login_info"].is_set():
+        joined = await client_joined(client_sock, user, password, token)
+    elif receieve_events["set_register_info"].is_set():
+        joined = await new_user_protocol(client_sock, user, password, token)
 
     if not joined:
         if config["login_attempts"] < 3:
@@ -262,13 +289,15 @@ async def heartbeat(client_sock):
         return
     
     try:
-        response = await recieve_from_server(client_sock, wait_for=1, supress=True)
+        response = await recieve_from_server(client_sock, wait_for=1, supress=False)
         if response:
             recieved = receieve_queue["heartbeat"].get()
             if not recieved:
+                print("HEARTBEAT: reponse but did not fetch from queue")
                 return False
             return recieved
         else:
+            print("HEARTBEAT: no server response")
             return False
     
     except queue.Empty:
@@ -276,6 +305,8 @@ async def heartbeat(client_sock):
 
 async def pulse_functions(client_socket):
     try:
+        if len(heartbeat_functions) == 0:
+            print("heartbeat functions empty")
         for funk_key in heartbeat_functions:
             await heartbeat_functions[funk_key](client_socket)
     except Exception as e:
@@ -295,13 +326,17 @@ async def run_client_mainloop(client_sock, stop_event):
         if receieve_events["send_message"].is_set():
             receieve_events["send_message"].clear()
             msg = cross_comminication_queues["chat_message"].get(timeout=1)
-            await send_to_server(client_sock, msg, True)
-            print("sent message")
+            sent = await send_to_server(client_sock, msg, True)
+            print("sent|",sent)
 
         try:
             recieved = False
             recieved = await recieve_from_server(client_sock, wait_for=1, supress=True)
             if recieved:
+                try:
+                    print(receieve_queue["chat"].get(timeout=0.2))
+                except queue.Empty:
+                    pass
                 recieved = receieve_queue["main"].get(timeout=0.5)
 
             if not recieved:

@@ -22,7 +22,7 @@ class Client_thread(QThread):
 
     async def async_run(self):
         try:
-            async with websockets.connect(HOST) as self.client_sock: 
+            async with websockets.connect(HOST, ping_interval=15, ping_timeout=5) as self.client_sock:
                 print("Client connected")
                 try:
                     await client.run_client(self.client_sock, self.login_signal, self.rec_stop, self.main_menu_signal)
@@ -153,10 +153,14 @@ class DropDownMenu(QWidget):
                 online_user.clicked.connect(self.select_user)
                 self.online_users[user] = online_user   
 
+        remove_user = []
         for user in self.online_users: #removes 
             if user not in users and self.online_users[user] != None:
-                self.online_users[user].deleteLater()
-                self.online_users[user] = None
+                self.online_users[user] .deleteLater()
+                remove_user.append(user)
+
+        for user in remove_user:
+            del self.online_users[user]
 
     def select_user(self):
         button = self.sender()
@@ -237,14 +241,11 @@ class Window(QWidget):
         self.main_layout.addItem(QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 
     def register(self):
-        if config["register_attempts"] < 5:
-            username = self.register_username.text()
-            password = self.register_password.text()
-            joined = asyncio.run(client.new_user_protocol(config["client_sock"], username, password, config["token"]))
-            if joined == 1:
-                self.main_menu_layout()
-            if not joined:
-                config["register_attempts"] += 1
+        username = self.register_username.text()
+        password = self.register_password.text()
+        client.cross_comminication_queues["username"].put_nowait(username)
+        client.cross_comminication_queues["password"].put_nowait(password)
+        client.receieve_events["set_register_info"].set()
 
     def register_menu_layout(self):
         self.clearLayout()
