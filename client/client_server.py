@@ -48,12 +48,20 @@ except Exception as e:
     print(f"An unexpected error occurred: {e}")
 
 
+def get_queue_content():
+    for tag in receieve_queue:
+        print(f"\n \tTag: {tag}")
+        print(receieve_queue[tag].queue)
+
 def send_to_server(client_sock, msg, supress = False):
     if type(msg) is dict:
         try:
             """all messages must be json format"""
             client_sock.sendall(json.dumps(msg).encode())
             return True
+        except socket.timeout:
+            print("Socket timed out waiting for data.")
+            return
         except Exception as e:
             if not supress:
                 print(f"Could not send message to server {e}\n")
@@ -67,6 +75,10 @@ def recieve_from_server(client_sock, expected_tag=None, supress=False, chat_rec=
     #masse tull
     try:
         data = client_sock.recv(1024)
+    except socket.timeout:
+        print("Socket timed out waiting for data.")
+        add_to_response_log(None)
+        return 
     except Exception as e:
         if not chat_rec:
             add_to_response_log(None)
@@ -291,7 +303,7 @@ def client(): #activates a client
                 heartbeat_thread.join()  # Wait for the thread to finish
                 print(f"Disconnected client {user}, lost connection to server\n")
                 break
-
+            
             ask = input("Cmd: ")
             if ask == "exit":
                 client_sock.close()

@@ -11,7 +11,6 @@ ph = PasswordHasher()
 blacklisted_tokens = {}
 client_keys = { }
 
-
 def hash_password(password):
     """Hashes a password using Argon2."""
     return ph.hash(password)  # Returns a hashed password

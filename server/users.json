@@ -3,7 +3,7 @@
         "username": "test",
         "password": "$argon2id$v=19$m=65536,t=3,p=4$XqAotKAcPDGekYKar3IXvQ$g/kPB6/ndzAFzNIWaUeRR/VW1z65/Qn4qSOii/0vlXw",
         "id": "00000",
-        "permission_level": "admin"
+        "permission_level": "basic"
     },
     "banana": {
         "username": "banana",
@@ -15,6 +15,24 @@
         "username": "Toni",
         "password": "$argon2id$v=19$m=65536,t=3,p=4$emwojPv1WuLBC/okkP/+Zw$o6CXIC3v5XghDg4btf+JRohezWGmaeDXtkXyUbB4/wE",
         "id": "00002",
+        "permission_level": "admin"
+    },
+    "test2": {
+        "username": "test2",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$mEwnR+K98w2IuA+HOme+MA$JZlYJ/oCWta/CjUxQgHRd1E2vo12xqiGCpzLzgRcZoE",
+        "id": "00003",
+        "permission_level": "basic"
+    },
+    "Macaroni": {
+        "username": "Macaroni",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$xf/O0rtyMW3/Gnki5pnYxg$GNyPsUWVtVb5HYhiExiQ3aKUcdG4OpVrNvwV7xFU7Ug",
+        "id": "00004",
+        "permission_level": "basic"
+    },
+    "cisker": {
+        "username": "cisker",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$I4vmKZjAnIFvZn3OLZAGEw$W6MJkwLUs5p+0/wCsWg1JX6pUfdyaSX1Gfcie2l1fm4",
+        "id": "00005",
         "permission_level": "basic"
     }
 }

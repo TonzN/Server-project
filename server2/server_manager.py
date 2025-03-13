@@ -1,12 +1,9 @@
-import socket
 import threading
 import asyncio
 import json
-import uuid
+import websockets
 import time
 import os
-import jwt
-import datetime
 import server_utils as utils
 from loads import *
 
@@ -14,12 +11,39 @@ HOST = config["HOST"]
 PORT = config["PORT"]
 client_capacity = config["user_capacity"] #to not connect more users than you can handle
 func_keys = config["function_keys"]
-recieve_timeout = 5 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
-standby_time = 60*3 #time you allow someone to be trying to login
-timeout = 15 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
-user_profiles = {}
-online_users = {}
+recieve_timeout = 9 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
+standby_time = 60*5 #time you allow someone to be trying to login
+timeout = 30 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
+
 #all functrions created must have an id passed
+
+async def message_group(loop, data, tag, token):
+    try:
+        profile = get_user_profile(token)
+        if profile:
+            group = data[0]
+            msg = data[1]
+            if group in groups:
+                if group == "global":
+                    for user in online_users:
+                        if user != profile["name"]:
+                            client_socket = online_users[user]
+                            response = json.dumps({"data": [{"user": "[global]"+profile["name"], "message": msg}, "chat"]}) + "\n"
+                            await client_socket.send(response.encode()) #to send other users messages you need their socket
+                    return f"Sent message to {group}"
+            else:
+                return "invalid group"
+        else:
+            return "invalid token"
+    
+    except asyncio.TimeoutError:
+        print("Socket timout, could not send or recieve in time")
+        return "Did not send message"
+    
+    except Exception as e:
+        print(f"could not recieve or send back to group or error with provided data {e}")
+        return "Did not send message"
+
 async def message_user(loop, data, tag, token):
     try:
         profile = get_user_profile(token)
@@ -29,10 +53,10 @@ async def message_user(loop, data, tag, token):
             if user in online_users:
                 client_socket = online_users[user]
             else:
-                return "user is not online"
+                return f"{user} is not online"
             
             response = json.dumps({"data": [{"user": profile["name"], "message": msg}, "chat"]}) + "\n"
-            await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), recieve_timeout) #to send other users messages you need their socket
+            await client_socket.send(response.encode()) #to send other users messages you need their socket
             return f"Sent message to {user}"
         else:
             return "invalid token"
@@ -124,13 +148,17 @@ def verify_user(user_data):
         username = user_data["username"]
         password = user_data["password"]
         token = user_data["token"]
+
     except Exception as e:
         print("invalid data provided")
         return 0
     if username in users:
-        if not get_user_profile(token):
+        profile = get_user_profile(token)
+        if not profile:
             if utils.verify_password(users[username]["password"], password):
                 return 1
+            else:
+                return 0
         return 2
     return 0
 
@@ -154,9 +182,6 @@ def ping(msg, token=None): #updates users heartbeat time to maintain status heal
                 print("ping")
             user["heartbeat"] = time.time()
             return "pong"
-    if msg == "ping":
-        print("ping")
-    return "pong"
 
 def set_client(userdata)    : #only used when a client joins! profile contains server data important to run clients
     try: 
@@ -189,15 +214,10 @@ async def safe_client_disconnect(client_socket, loop, username, token):
     with open(users_path, 'w') as file:
         json.dump(users, file, indent=4)
         
-    response = "disconnect"
     if username:
         if username in online_users:
             online_users[username] = None
             del online_users[username]
-    try: 
-        await loop.sock_sendall(client_socket, json.dumps(response).encode())
-    except Exception as e:
-        pass
     
     payload = utils.validate_token(token)
     if payload:
@@ -206,13 +226,13 @@ async def safe_client_disconnect(client_socket, loop, username, token):
             del user_profiles[session_key]
         utils.invalidate_token(token)
 
-    client_socket.close()
+    await client_socket.close()
     #print("disconnect user...")
     return
 
-async def client_recieve_handler(client_socket, loop, recieve_timout):
+async def client_recieve_handler(websocket, loop, recieve_timout):
     try:
-        data = await asyncio.wait_for(loop.sock_recv(client_socket, 1024), recieve_timout) #format: action: ... data: ...
+        data = await asyncio.wait_for(websocket.recv(), timeout=recieve_timout) #format: action: ... data: ...
         data = json.loads(data.decode())
         response = None
         try: #unpacks data 
@@ -225,11 +245,11 @@ async def client_recieve_handler(client_socket, loop, recieve_timout):
             print(msg, function, tag)
             print(f"Could not get function and msg: {e}")
             return
-        
+
         """Server responses must be a dictionary: {"data": [content, tag]}"""
         if function in func_keys:  #checks if action requested exist as something the client can call for
             try:
-                if function == "message_user": #functions with unique cases needs its own call
+                if function == "message_user" or function == "message_group": #functions with unique cases needs its own call
                     response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
                 elif token: #function requires authentication
                     response = str(globals()[func_keys[function]](msg, token)) 
@@ -239,17 +259,17 @@ async def client_recieve_handler(client_socket, loop, recieve_timout):
             except Exception as e: #sends back error message, this error means something wrong happened while running given function
                 print(f"Function is not a valid server request: {e}\n Error at: {function}")
                 response = json.dumps({"data": ["Attempted running function and failed.\n Check if the input passed is right", tag]}) + "\n"
-                await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), recieve_timout)
+                await websocket.send(response.encode())
                 return False
         else:
             response = json.dumps({"data": ["invalid action", tag]}) + "\n"
-            await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), recieve_timout)
+            await websocket.send(response.encode())
             return False
 
         if response:
             msg = response
             response = json.dumps({"data": [response, tag]}) + "\n"
-            await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), recieve_timout)
+            await websocket.send(response.encode())
             #for login sequence
             if function == "veus":
                 return [function, msg]
@@ -259,19 +279,23 @@ async def client_recieve_handler(client_socket, loop, recieve_timout):
                 return [function, msg]
             
             return function #returns function name back incase its needed
+        
+    except websockets.exceptions.ConnectionClosed:
+        print("websocket.excpection lost connection")
+        return "Client closed"
 
     except asyncio.TimeoutError:
-        print("Socket timout, could not send or recieve in time")
-        return "Lost client"
+        #print("Socket timout, could not send or recieve in time")
+        return "lost client"
     
     except Exception as e:
         print(f"could not recieve or send back to client {e}")
         return "Lost client"
 
-async def send_to_user(client_socket, loop, message, tag, timeout):
+async def send_to_user(websocket, loop, message, tag, timeout):
     try:
         response = json.dumps({"data": [message, tag]}) + "\n"
-        await asyncio.wait_for(loop.sock_sendall(client_socket, response.encode()), timeout)
+        await websocket.send(response.encode())
         return True
 
     except asyncio.TimeoutError:
@@ -282,18 +306,18 @@ async def send_to_user(client_socket, loop, message, tag, timeout):
         print(f"could not recieve or send back to client {e}")
         return "Lost client"
     
-async def login(client_socket, loop):
+async def login(websocket, loop):
     """Manages login phase of clients attempting to login, login has 2 phases, it expects verify user to be called first
     or register, then the next call HAS to be set_user to generate a token, if these steps cant be followed login will fail and server
     disconnects client"""
-    verified = await client_recieve_handler(client_socket, loop, standby_time) #verified either returns False or a list 
+    verified = await client_recieve_handler(websocket, loop, standby_time) #verified either returns False or a list 
     """Verified: [function, status] where "1" is success"""
     if verified:
         if verified == "ping":
             return "ignore"
         
         if verified[0] == "veus" and verified[1] == "1" or verified[0] == "create_user" and verified[1] == "1":
-            setup = await client_recieve_handler(client_socket, loop, recieve_timeout) #setup [status, token]
+            setup = await client_recieve_handler(websocket, loop, recieve_timeout) #setup [status, token]
             try: 
                 if setup[1] == "False":
                     return False
@@ -320,6 +344,13 @@ def create_user(user_data): #userdata must be sent from the client as a dictiona
             users[username]["password"] = hashed_password
             users[username]["id"] = utils.gen_user_id()
             users[username]["permission_level"] = "basic"
+            users[username]["chat_history"] = {"global":[]}
+            users[username]["friends"] = {}
+            users[username]["groups"] = {}
+            users[username]["blacklist"] = {}
+            users[username]["securitymode"] = "normal"
+            users[username]["friend_requests"] = {}
+            users[username]["preferences"] = {}
             update_users_count() #this updates user count to make sure next generated id is unique
             with open(users_path, "w") as file: 
                 json.dump(users, file, indent=4)  #writes to users file
@@ -331,18 +362,20 @@ def create_user(user_data): #userdata must be sent from the client as a dictiona
         print("invalid token")
         return False
 
-async def client_handler(client_socket):
+async def client_handler(websocket, path=None):
     """Whenever you disconnect the client for whatever reason use safe client disconnect and await it since its async
     Login sequence HAS to go thru to make sure only registered users enters the main loop"""
+    print(f"New WebSocket connection from {websocket.remote_address}, path: {path}")
+
     loop = asyncio.get_event_loop()
     token = utils.generate_token()
     success = False
-    sent_token = await send_to_user(client_socket, loop, token, "join_protocol", 5)
+    sent_token = await send_to_user(websocket, loop, token, "join_protocol", 5)
     attempts = 3
     if sent_token:
         while attempts >= 0: #gives user 3 chances to login
             attempts -= 1
-            success = await login(client_socket, loop)
+            success = await login(websocket, loop)
             if success == "ignore":
                 attempts += 1
 
@@ -353,57 +386,47 @@ async def client_handler(client_socket):
 
     if not success:
         print("Login failed")
-        await safe_client_disconnect(client_socket, loop, None, token)
+        await safe_client_disconnect(websocket, loop, None, token)
         return
     #if token enters main loop
     client_is_connected = True 
     profile = get_user_profile(token) #fethes profile so the handler knows which user to pull from
     username = profile["name"]
-    online_users[username] = client_socket
+    online_users[username] = websocket
+    buffer_attemps = 3
    
     while client_is_connected: #mainloop just makes sure the client health is safe and the recieve handler is called
         if profile:
-            crh = await client_recieve_handler(client_socket, loop, recieve_timeout)
-            if crh == "Lost client":
-                profile["connection_error_count"] += 1
+            crh = await client_recieve_handler(websocket, loop, recieve_timeout)
+            if crh == "Client closed":
+                buffer_attemps -= 1
             else:
-                profile["connection_error_count"] = 0
-            
-            if profile["connection_error_count"] == 3:
-                print("Disconnected server to client")
+                buffer_attemps = 3
+            if buffer_attemps <= 0:
                 client_is_connected = False
-                await safe_client_disconnect(client_socket, loop, username, token)
+                await safe_client_disconnect(websocket, loop, username, token)
+                print(f"Disconnecting {username}")
 
-            if time.time() - profile["heartbeat"] > timeout:
+            if time.time() - profile["heartbeat"] >= timeout:
                 print("Client timout! Have not recieved a ping for too long!")
                 client_is_connected = False
-                await safe_client_disconnect(client_socket, loop, username, token)  
+                await safe_client_disconnect(websocket, loop, username, token)  
         else:
             print("Disconnected server to client, unrecognized session key or token")
             client_is_connected = False
-            await safe_client_disconnect(client_socket, loop, username, token)
+            await safe_client_disconnect(websocket, loop, username, token)
 
-        time.sleep(0.02) #small delay of 20ms to not exhaust the system
+        time.sleep(0.05) #small delay of 20ms to not exhaust the system
 
+    
 async def run_server():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-        server_socket.bind((HOST, PORT)) 
-        server_socket.listen(client_capacity)
-        server_socket.setblocking(False) #must be false because its async
-        loop = asyncio.get_event_loop() #evenloop for courotine 
-        print("Server spawned!!")
-        while config["run_server"]:
-            try: 
-                client_socket, client_addr = await loop.sock_accept(server_socket)
-                print(f"Accepted connection from {client_addr}")
+    """Starts the WebSocket server."""
+    server = await websockets.serve(client_handler, HOST, PORT)
+    print(f"WebSocket Server running on ws://{HOST}:{PORT}")
+    
+    await server.wait_closed()  # Keeps server running
+    print("closing server")
 
-                # Handle the client in a separate coroutine
-                asyncio.create_task(client_handler(client_socket))
-        
-            except Exception as e:
-                print("Error in main loop {e} \n")
-
-    print("closing server\n")
     
 async def main():
     await run_server()
