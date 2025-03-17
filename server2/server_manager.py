@@ -186,6 +186,8 @@ def ping(msg, token=None): #updates users heartbeat time to maintain status heal
                 print("ping")
             user["heartbeat"] = time.time()
             return "pong"
+        else:
+            print(f"missing token | {user["name"]}")
 
 def set_client(userdata)    : #only used when a client joins! profile contains server data important to run clients
     try: 
@@ -445,7 +447,7 @@ async def client_handler(websocket, path=None):
                 print(f"Disconnecting {username}")
 
             if time.time() - profile["heartbeat"] >= timeout:
-                print("Client timout! Have not recieved a ping for too long!")
+                print(f"Client: {profile["name"]} timout! Have not recieved a ping for too long!")
                 client_is_connected = False
                 await safe_client_disconnect(websocket, loop, username, token)  
         else:
