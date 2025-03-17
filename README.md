@@ -1,4 +1,37 @@
 # super-server
+# Server 2
+-----Server------
+Aws based cloud server using EC2
+run run_aws to access the aws server
+activate the env: source myenv/bin/avtivate
+open the git reppo: cd Server-project
+to run the server: python3 server2/server_manager.py
+
+----specifics----
+token based authetentication
+https with own domain
+can handle a lot of users, scaleable by design
+role permission system
+user profiles
+createable groupchats
+friends
+
+
+WIP:
+    E2EE
+    DDOS prevention
+
+----client-----
+App connected to the server, connects automatically you need to register a user for access.
+a communication platform
+Can send messages global, to specific users or in groups.
+
+
+
+
+
+
+# Server 1
 # LAB
 Når du kjører klienten og servern er på, for å koble til skriv connect.
 
