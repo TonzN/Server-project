@@ -20,6 +20,7 @@ online_users = {}
 groups = {"global"}
 #all functrions created must have an id passed
 
+
 async def message_group(loop, data, tag, token):
     try:
         profile = get_user_profile(token)
@@ -234,6 +235,24 @@ async def safe_client_disconnect(client_socket, loop, username, token):
     return
 
 async def client_recieve_handler(websocket, loop, recieve_timout):
+    """
+    Handles incoming messages from a client websocket connection.
+    This function listens for messages from a client, processes the received data,
+    and sends appropriate responses back to the client based on the requested action.
+    Args:
+        websocket (websockets.WebSocketServerProtocol): The websocket connection to the client.
+        loop (asyncio.AbstractEventLoop): The event loop to run asynchronous tasks.
+        recieve_timout (int): The timeout duration for receiving messages from the client.
+    Returns:
+        str or list: Returns the function name if the action is successfully processed,
+                     or a list containing the function name and message for specific actions.
+                     Returns "Client closed" if the connection is closed by the client,
+                     or "lost client" if there is a timeout or other exception.
+    Raises:
+        websockets.exceptions.ConnectionClosed: If the websocket connection is closed.
+        asyncio.TimeoutError: If receiving a message times out.
+        Exception: If there is an error in receiving or sending data.
+    """
     try:
         data = await asyncio.wait_for(websocket.recv(), timeout=recieve_timout) #format: action: ... data: ...
         data = json.loads(data.decode())
@@ -245,7 +264,6 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
             token = data["token"]
          #   print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
         except Exception as e:
-            print(msg, function, tag)
             print(f"Could not get function and msg: {e}")
             return
 
@@ -366,11 +384,24 @@ def create_user(user_data): #userdata must be sent from the client as a dictiona
         return False
 
 async def client_handler(websocket, path=None):
-    """Whenever you disconnect the client for whatever reason use safe client disconnect and await it since its async
-    Login sequence HAS to go thru to make sure only registered users enters the main loop"""
+    """
+    Handles a new WebSocket client connection.
+
+    Parameters:
+    websocket (websockets.WebSocketServerProtocol): The WebSocket connection to the client.
+    path (str, optional): The path of the WebSocket connection. Defaults to None.
+
+    Returns:
+    None
+    Whenever you disconnect the client for whatever reason use safe client disconnect and await it since its async.
+    Login sequence HAS to go thru to make sure only registered users enters the main loop.
+    """
     print(f"New WebSocket connection from {websocket.remote_address}, path: {path}")
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
+    timeout = 30
+    if not hasattr(utils, 'generate_token'):
+        raise ImportError(name='generate_token', msg="The 'generate_token' function is not available in 'utils'. Please check the import and initialization of 'utils'.")
     token = utils.generate_token()
     success = False
     sent_token = await send_to_user(websocket, loop, token, "join_protocol", 5)
@@ -391,20 +422,23 @@ async def client_handler(websocket, path=None):
         print("Login failed")
         await safe_client_disconnect(websocket, loop, None, token)
         return
-    #if token enters main loop
+    # If the token is valid, enter the main loop
     client_is_connected = True 
     profile = get_user_profile(token) #fethes profile so the handler knows which user to pull from
     username = profile["name"]
     online_users[username] = websocket
     buffer_attemps = 3
    
+    sleep_interval = 0.1  # initial sleep interval
     while client_is_connected: #mainloop just makes sure the client health is safe and the recieve handler is called
+        start_time = time.time()
         if profile:
             crh = await client_recieve_handler(websocket, loop, recieve_timeout)
             if crh == "Client closed":
                 buffer_attemps -= 1
             else:
                 buffer_attemps = 3
+                
             if buffer_attemps <= 0:
                 client_is_connected = False
                 await safe_client_disconnect(websocket, loop, username, token)
@@ -419,12 +453,13 @@ async def client_handler(websocket, path=None):
             client_is_connected = False
             await safe_client_disconnect(websocket, loop, username, token)
 
-        time.sleep(0.05) #small delay of 20ms to not exhaust the system
-
-    
+        elapsed_time = time.time() - start_time
+        sleep_interval = max(0.01, min(0.1, sleep_interval * (1.1 if elapsed_time < sleep_interval else 0.9)))
+        await asyncio.sleep(sleep_interval)  # dynamically adjusted sleep interval
+ 
 async def run_server():
     """Starts the WebSocket server."""
-    server = await websockets.serve(client_handler, HOST, PORT)
+    server = await websockets.serve(client_handler, HOST, PORT, ping_interval=None)
     print(f"WebSocket Server running on ws://{HOST}:{PORT}")
     
     await server.wait_closed()  # Keeps server running
