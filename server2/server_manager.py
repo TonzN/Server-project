@@ -59,7 +59,7 @@ async def message_user(loop, data, tag, token):
             else:
                 return f"{user} is not online"
             
-            response = json.dumps({"data": [{"user": profile["name"], "message": msg}, "chat"]}) + "\n"
+            response = json.dumps({"data": [{"user": profile["name"], "message": msg}, "chat"], "signals": "chat"}) + "\n"
             await client_socket.send(response.encode()) #to send other users messages you need their socket
             return f"Sent message to {user}"
         else:
