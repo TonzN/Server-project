@@ -32,7 +32,7 @@ async def message_group(loop, data, tag, token):
                     for user in online_users:
                         if user != profile["name"]:
                             client_socket = online_users[user]
-                            response = json.dumps({"data": [{"user": "[global]"+profile["name"], "message": msg}, "chat"], "signals": "chat"}) + "\n"
+                            response = json.dumps({"data": [{"user": "[global]"+profile["name"], "message": msg, "signals": "chat"}, "chat", ],  "signals": "chat"}) + "\n"
                             await client_socket.send(response.encode()) #to send other users messages you need their socket
                     return f"Sent message to {group}"
             else:
@@ -59,7 +59,7 @@ async def message_user(loop, data, tag, token):
             else:
                 return f"{user} is not online"
             
-            response = json.dumps({"data": [{"user": profile["name"], "message": msg}, "chat"], "signals": "chat"}) + "\n"
+            response = json.dumps({"data": [{"user": profile["name"], "message": msg, "signals": "chat"}, "chat"]}) + "\n"
             await client_socket.send(response.encode()) #to send other users messages you need their socket
             return f"Sent message to {user}"
         else:
