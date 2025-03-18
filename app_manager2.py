@@ -12,6 +12,35 @@ class RemoteSignal(QThread):
     signal = pyqtSignal(dict)
 
 class Client_thread(QThread):
+    """
+    A class to manage the client thread for a messaging application.
+    Attributes:
+    ----------
+    login_signal : pyqtSignal
+        Signal emitted when login is successful.
+    main_menu_signal : pyqtSignal
+        Signal emitted to navigate to the main menu.
+    rec_stop : threading.Event or None
+        Event to stop the receiving thread.
+    heart_stop : threading.Event or None
+        Event to stop the heartbeat thread.
+    rec_thread : threading.Thread or None
+        Thread for receiving messages.
+    client_sock : websockets.WebSocketClientProtocol or None
+        WebSocket client socket.
+    heartbeat_thread : threading.Thread or None
+        Thread for sending heartbeat messages.
+    Methods:
+    -------
+    async async_run():
+        Asynchronously connects to the WebSocket server and runs the client.
+    run():
+        Starts the event loop and runs the async_run method.
+    async end_socket():
+        Asynchronously closes the WebSocket client socket.
+    stop():
+        Stops the client thread, closes the socket, and performs cleanup.
+    """
     login_signal = pyqtSignal()
     main_menu_signal = pyqtSignal()
     rec_stop = None

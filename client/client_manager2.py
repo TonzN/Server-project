@@ -41,6 +41,7 @@ receieve_queue = { #tag associated with where message has associated function
     "status_check":  queue.Queue()
 }
 
+
 chat_data = {
     "path": None,
     "chat": None
@@ -54,7 +55,7 @@ heartbeat_functions = {}
 async def send_to_server(client_sock, msg, supress = False):
     if type(msg) is dict:
         try:
-            await client_sock.send(json.dumps(msg).encode())
+            await asyncio.wait_for(client_sock.send(json.dumps(msg).encode()), timeout=0.5)
             return True
         except Exception as e:
             if not supress:
@@ -65,7 +66,22 @@ async def send_to_server(client_sock, msg, supress = False):
         if not supress:
             print("Invalid message format, please send as dictionary")
 
-async def recieve_from_server(client_sock, wait_for=2, expected_tag=None, supress=False, no_status_check=False, origin=False):
+async def receive_from_server(client_sock, wait_for=2, expected_tag=None, supress=False, no_status_check=False, origin=False):
+    """
+    Asynchronously receives data from the server through the given client socket.
+    Args:
+        client_sock (asyncio.StreamReader): The client socket to receive data from.
+        wait_for (int, optional): The timeout duration in seconds for waiting to receive data. Defaults to 2.
+        expected_tag (str, optional): The expected tag to match the received message. Defaults to None.
+        supress (bool, optional): If True, suppresses error messages. Defaults to False.
+        no_status_check (bool, optional): If True, skips adding to the response log on error. Defaults to False.
+        origin (bool, optional): Additional context for error messages. Defaults to False.
+    Returns:
+        bool: True if the message is successfully received and processed, False otherwise.
+        None: If an error occurs or the operation times out.
+    Raises:
+        Exception: If an unexpected error occurs during the receiving process.
+    """
     try:
         data = await asyncio.wait_for(client_sock.recv(), timeout=wait_for)
     except Exception as e:
@@ -88,33 +104,58 @@ async def recieve_from_server(client_sock, wait_for=2, expected_tag=None, supres
         msg = json.loads(message)
         content = msg["data"][0]
         tag = msg["data"][1]
+        if tag == "chat":
+            print(content)
         add_to_response_log(content)
 
         try:
             if tag in receieve_queue:
                 receieve_events[tag].set()
-                receieve_queue[tag].put(content)
-                for match in signals:
-                    if match == tag and signals[match][1] == type(content):
-                        try:
-                            signals[tag][0].emit(content)
-                        except Exception as e:
-                            print(f"2: recieve from server error: {e}")
+                receieve_queue[tag].put(content, block=False)
             else:
                 print(f"invalid tag {tag} {content}")
                 return False
         except Exception as e:
             print(f"1: Recieve from server error: {e}")
-            
-        return True
 
-async def new_user_protocol(client_sock, user, password, token):
+    return True
+
+def full_pull_queue(_queue, timeout=0.1):
+    if _queue in receieve_queue:
+        while not receieve_queue[_queue].empty():
+            try:
+                recieved = receieve_queue[_queue].get(timeout=timeout)
+                if type(recieved) == str:
+                    try:
+                        recieved = ast.literal_eval(recieved)
+                    except:
+                        continue
+                        
+                if recieved:
+                    if "signal" in recieved:
+                        if recieved["signal"] in signals:   
+                            try:
+                                if "data" in recieved:
+                                    if type(recieved["data"]) == signals[recieved["signal"]][1]: #received content package
+                                        signals[recieved["signal"]][0].emit(recieved["data"])       
+                                elif type(recieved) == signals[recieved["signal"]][1]: #received datapackage
+                                    signals[recieved["signal"]][0].emit(recieved)
+
+                            except Exception as e:
+                                print(f"Error at signal emit: {e}")
+                                 
+            except queue.Empty:
+                break
+    else:
+        print("Invalid queue")
+
+async def new_user_protocol(client_sock, user, password, token):    
     print("started registering")
     message = gen_message("create_user", {"username": user, "password": password, "token": token}, "join_protocol")
     await send_to_server(client_sock, message)
     response = None
     try:
-        if await recieve_from_server(client_sock, supress=True):
+        if await receive_from_server(client_sock, supress=True):
             response = receieve_queue["join_protocol"].get(timeout=1)
             client.receieve_events["join_protocol"].clear()
     except asyncio.TimeoutError:
@@ -126,7 +167,7 @@ async def new_user_protocol(client_sock, user, password, token):
     except Exception as e:
         print(f"{e}")
         return False
-        
+      
 
     if response:
         if response == "1":
@@ -135,7 +176,7 @@ async def new_user_protocol(client_sock, user, password, token):
             await send_to_server(client_sock, msg)
             success = None
             try:   
-                if await recieve_from_server(client_sock, supress=True):
+                if await receive_from_server(client_sock, supress=True):
                     success = receieve_queue["join_protocol"].get(timeout=1)
                     client.receieve_events["join_protocol"].clear()
 
@@ -164,6 +205,18 @@ async def new_user_protocol(client_sock, user, password, token):
         return False
 
 def gen_message(action="", data="", tag="", token=None):
+    """
+    Generates a message dictionary with the given parameters.
+
+    Args:
+        action (str): The action to be performed. Default is an empty string.
+        data (str): The data associated with the action. Default is an empty string.
+        tag (str): A tag to categorize or identify the message. Default is an empty string.
+        token (Any): An optional token for authentication or identification. Default is None.
+
+    Returns:
+        dict: A dictionary containing the provided parameters.
+    """
     return {"action": action, "data":data, "tag": tag, "token": token}
 
 def add_to_response_log(response):
@@ -180,7 +233,7 @@ async def client_joined(client_sock, user, password, token):
     await send_to_server(client_sock, message)
     response = None
     try:
-        if await recieve_from_server(client_sock, supress=True):
+        if await receive_from_server(client_sock, supress=True):
             response = receieve_queue["join_protocol"].get(timeout=1)
             client.receieve_events["join_protocol"].clear()
     except asyncio.TimeoutError:
@@ -199,7 +252,7 @@ async def client_joined(client_sock, user, password, token):
             msg = gen_message("set_user", message , "join_protocol")
             await send_to_server(client_sock, msg)
             try:   
-                if await recieve_from_server(client_sock, supress=True):
+                if await receive_from_server(client_sock, supress=True):
                     success = receieve_queue["join_protocol"].get(timeout=1)
                     client.receieve_events["join_protocol"].clear()
 
@@ -253,7 +306,7 @@ async def status_check(client_socket, token, force_ping = False):
     #ping        
 
 async def run_init(client_sock, login_signal):
-    received = await recieve_from_server(client_sock, supress=True)
+    received = await receive_from_server(client_sock, supress=True)
     token = None
     if received:
         token = receieve_queue["join_protocol"].get(timeout=2)
@@ -289,9 +342,9 @@ async def heartbeat(client_sock):
         return
     
     try:
-        response = await recieve_from_server(client_sock, wait_for=1, supress=False)
+        response = await receive_from_server(client_sock, wait_for=1, supress=False)
         if response:
-            recieved = receieve_queue["heartbeat"].get()
+            recieved = receieve_queue["heartbeat"].get(timeout=1)
             if not recieved:
                 print("HEARTBEAT: reponse but did not fetch from queue")
                 return False
@@ -304,6 +357,19 @@ async def heartbeat(client_sock):
         return False
 
 async def pulse_functions(client_socket):
+    """
+    Executes a series of heartbeat functions asynchronously using the provided client socket.
+
+    Args:
+        client_socket: The socket object used for client communication.
+
+    Raises:
+        Exception: If an error occurs during the execution of any heartbeat function.
+
+    Notes:
+        - If no heartbeat functions are registered, it prints a message indicating that the list is empty.
+        - Each heartbeat function is expected to be an asynchronous function that takes the client_socket as an argument.
+    """
     try:
         if len(heartbeat_functions) == 0:
             print("heartbeat functions empty")
@@ -312,10 +378,29 @@ async def pulse_functions(client_socket):
     except Exception as e:
         print(f"Error at pulse function: {e}")
 
+
 async def run_client_mainloop(client_sock, stop_event):
+    """
+    Main loop for the client that handles sending and receiving messages, 
+    as well as maintaining a heartbeat to ensure the connection is alive.
+    Args:
+        client_sock (asyncio.StreamWriter): The client's socket connection to the server.
+        stop_event (threading.Event): An event to signal when to stop the main loop.
+    Functionality:
+        - Sends a heartbeat signal at regular intervals to keep the connection alive.
+        - Sends messages from the client to the server when triggered.
+        - Receives messages from the server and processes them.
+        - Handles exceptions and errors that occur during message sending and receiving.
+    Notes:
+        - The function uses asyncio for asynchronous operations.
+        - The heartbeat interval is defined by the constant HEARTBEAT_INTERVAL.
+        - The function relies on several external variables and functions such as 
+          `heartbeat`, `pulse_functions`, `send_to_server`, `recieve_from_server`, 
+          `receieve_events`, `cross_comminication_queues`, and `signals`.
+    """
     HEARTBEAT_TIME = time.time()
     while not stop_event.is_set():
-        time.sleep(0.2)
+        await asyncio.sleep(0.1)
         if time.time() - HEARTBEAT_TIME >= HEARTBEAT_INTERVAL:
             HEARTBEAT_TIME = time.time()
             heartbeat_attempt = await heartbeat(client_sock)
@@ -325,38 +410,23 @@ async def run_client_mainloop(client_sock, stop_event):
         
         if receieve_events["send_message"].is_set():
             receieve_events["send_message"].clear()
-            msg = cross_comminication_queues["chat_message"].get(timeout=1)
-            sent = await send_to_server(client_sock, msg, True)
-            print("sent|",sent)
-
-        try:
-            recieved = False
-            recieved = await recieve_from_server(client_sock, wait_for=1, supress=True)
-            if recieved:
-                try:
-                    print(receieve_queue["chat"].get(timeout=0.2))
-                except queue.Empty:
-                    pass
-                recieved = receieve_queue["main"].get(timeout=0.5)
-
-            if not recieved:
+            try:
+                msg = cross_comminication_queues["chat_message"].get(timeout=1)
+            except queue.Empty:
+                print("No chat message to send")
                 continue
-        
-        except queue.Empty:
-            continue 
-
+            sent = await send_to_server(client_sock, msg, True)
+         #   await receive_from_server(client_sock, wait_for=0.5, supress=True)
+        try:
+            await receive_from_server(client_sock, wait_for=1, supress=True)
+            full_pull_queue("chat")
+            if receieve_events["main"].is_set():
+                full_pull_queue("main")
+                receieve_events["main"].clear()
+                
         except Exception as e:
             print(f"Mainloop error: {e}")
         
-        try:
-            recieved = ast.literal_eval(recieved)
-        except:
-            continue
-
-        if recieved:
-            if recieved["signal"] in signals:   
-                if type(recieved["data"]) == signals[recieved["signal"]][1]:
-                    signals[recieved["signal"]][0].emit(recieved["data"])       
             
 async def run_client(client_sock, login_signal, stop_event, main_menu_signal):
     if not config["token"]:

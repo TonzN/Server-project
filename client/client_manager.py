@@ -76,7 +76,7 @@ async def recieve_from_server(client_sock, wait_for=2, expected_tag=None, supres
         add_to_response_log(content)
 
         if tag in receieve_queue:
-            receieve_queue[tag].put_nowait(content)
+            await receieve_queue[tag].put(content)
             receieve_events[tag].set()
             for match in signals:
                 if match == tag:
@@ -136,7 +136,7 @@ async def client_joined(client_sock, user, password, token):
     send_to_server(client_sock, message)
     try:
         await asyncio.wait_for(asyncio.to_thread(receieve_events["join_protocol"].wait), timeout=1)
-    except Exception as e:
+    except (asyncio.TimeoutError, asyncio.CancelledError) as e:
         receieve_events["join_protocol"].set()
         receieve_events["join_protocol"].clear()
         return False
@@ -247,7 +247,7 @@ async def async_receive_thread(client_sock, stop):
         try:
             await recieve_from_server(client_sock, 1, None, True, True)
             counter = 0
-        except Exception as e:
+        except (socket.error, asyncio.TimeoutError) as e:
             counter += 1
             if counter >= 10:
                 connected = await status_check(client_sock, config["token"])
@@ -276,7 +276,7 @@ async def run_client(client_sock, heartbeat_stop):
     connected = True
 
     while connected:
-
+        await asyncio.sleep(0.2)  # Add a small sleep interval to prevent high CPU usage
         if heartbeat_stop.is_set() or config["stop"] == True:
             connected = False
             return
@@ -284,30 +284,36 @@ async def run_client(client_sock, heartbeat_stop):
         if config["successfull_login"]:   
             try:
                 success = await asyncio.wait_for(asyncio.to_thread(receieve_events["main"].wait), timeout=1)
-                recieved = await receieve_queue["main"].get()
+                try:
+                    recieved = await receieve_queue["main"].get()
+                except asyncio.QueueEmpty as e:
+                    print(f"Error receiving from main queue: {e}")
+                    continue
                 receieve_events["main"].clear()
                 if not success:
                     receieve_events["main"].set()
                     receieve_events["main"].clear()
                     continue
 
-            except asyncio.TimeoutError as e:
+            except asyncio.TimeoutError:
                 receieve_events["main"].set()
                 receieve_events["main"].clear()
                 continue
 
-            except Exception as e:
+            except (asyncio.TimeoutError, asyncio.CancelledError) as e:
                 receieve_events["main"].set()
                 receieve_events["main"].clear()
                 return
             
             try:
-                recieved = ast.literal_eval(recieved)
+                try:
+                    recieved = ast.literal_eval(recieved)
+                except (ValueError, SyntaxError) as e:
+                    print(f"Error parsing received data: {e}")
+                    continue
             except:
                 continue
 
             if recieved:
                 if recieved["signal"] in signals:
                     signals[recieved["signal"]].emit(recieved["data"])
-
-        time.sleep(0.25)
