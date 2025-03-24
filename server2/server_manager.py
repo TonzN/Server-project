@@ -461,18 +461,18 @@ async def client_handler(websocket, path=None):
  
 async def run_server():
     """Starts the WebSocket server."""
-    server = await websockets.serve(client_handler, HOST, PORT, ping_interval=None)
+    server = await websockets.serve(client_handler, HOST, PORT+i, ping_interval=None)
     print(f"WebSocket Server running on ws://{HOST}:{PORT}")
     
     await server.wait_closed()  # Keeps server running
     print("closing server")
 
     
-async def main():
-    await run_server()
+async def main(i):
+    await run_server(i)
 
-def test_thread():
-    asyncio.run(main())
+def test_thread(i):
+    asyncio.run(main(i))
 
 for i in range(2):
-    threading.Thread(target=test_thread).start()
+    threading.Thread(target=test_thread, args=(i)).start()
