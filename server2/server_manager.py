@@ -459,7 +459,7 @@ async def client_handler(websocket, path=None):
         sleep_interval = max(0.01, min(0.1, sleep_interval * (1.1 if elapsed_time < sleep_interval else 0.9)))
         await asyncio.sleep(sleep_interval)  # dynamically adjusted sleep interval
  
-async def run_server():
+async def run_server(i):
     """Starts the WebSocket server."""
     server = await websockets.serve(client_handler, HOST, PORT+i, ping_interval=None)
     print(f"WebSocket Server running on ws://{HOST}:{PORT}")
