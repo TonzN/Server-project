@@ -5,9 +5,6 @@ import client.datastructures as ds
 from client.thread_manager import *
 from  client.client_utils import *
 
-HOST = "ws://0.0.0.0:8765"  # The server's hostname or IP address
-PORT = 12345  # The port used by the server
-
 run_terminal = True
 HEARTBEAT_INTERVAL = 3
 short_lived_client = True
@@ -40,7 +37,6 @@ receieve_queue = { #tag associated with where message has associated function
     "chat":          queue.Queue(),
     "status_check":  queue.Queue()
 }
-
 
 chat_data = {
     "path": None,
@@ -130,7 +126,7 @@ def full_pull_queue(_queue, timeout=0.1):
                         recieved = ast.literal_eval(recieved)
                     except:
                         continue
-                        
+
                 if recieved:
                     if "signal" in recieved:
                         if recieved["signal"] in signals:   
@@ -378,7 +374,6 @@ async def pulse_functions(client_socket):
     except Exception as e:
         print(f"Error at pulse function: {e}")
 
-
 async def run_client_mainloop(client_sock, stop_event):
     """
     Main loop for the client that handles sending and receiving messages, 
@@ -410,15 +405,21 @@ async def run_client_mainloop(client_sock, stop_event):
         
         if receieve_events["send_message"].is_set():
             receieve_events["send_message"].clear()
-            try:
-                msg = cross_comminication_queues["chat_message"].get(timeout=1)
-            except queue.Empty:
-                print("No chat message to send")
-                continue
-            sent = await send_to_server(client_sock, msg, True)
-         #   await receive_from_server(client_sock, wait_for=0.5, supress=True)
+            while not cross_comminication_queues["chat_message"].empty(): 
+                try:
+                    msg = cross_comminication_queues["chat_message"].get(timeout=0.5)
+                except queue.Empty:
+                    print("No chat message to send")
+                    continue
+                sent = await send_to_server(client_sock, msg, True)
+                if sent:
+                    if msg["data"][0] == "global":
+                        signals["chat"][0].emit({"user": "[global] you", "message": msg["data"][1], "signal": "chat"})
+                    else:
+                        signals["chat"][0].emit({"user": "you", "message": msg["data"][1], "signal": "chat"})
+            #   await receive_from_server(client_sock, wait_for=0.5, supress=True)
         try:
-            await receive_from_server(client_sock, wait_for=1, supress=True)
+            await receive_from_server(client_sock, wait_for=0.5, supress=True)
             full_pull_queue("chat")
             if receieve_events["main"].is_set():
                 full_pull_queue("main")
@@ -426,8 +427,7 @@ async def run_client_mainloop(client_sock, stop_event):
                 
         except Exception as e:
             print(f"Mainloop error: {e}")
-        
-            
+                    
 async def run_client(client_sock, login_signal, stop_event, main_menu_signal):
     if not config["token"]:
         token = await run_init(client_sock, login_signal)

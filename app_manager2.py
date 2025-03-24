@@ -5,7 +5,7 @@ from client.thread_manager import *
 from  client.client_utils import *
 import websockets
 
-HOST = "wss://wss.vocatus.no:443" # The server's hostname or IP address
+HOST = "wss://wss.vocatus.no/ws/" # The server's hostname or IP address
 PORT = 12345  # The port used by the server
 
 class RemoteSignal(QThread):
@@ -104,6 +104,7 @@ class Chat(QWidget):
         super().__init__(parent)
         self.setWindowTitle("Chat Interface")
         self.main_layout = QVBoxLayout(self)
+        self.send_db = False
 
         # Chat history using QListWidget
         self.chat_list = QListWidget()
@@ -114,30 +115,39 @@ class Chat(QWidget):
         self.input_field.setPlaceholderText("Type a message...")
         self.send_button = QPushButton("Send")
         self.send_button.clicked.connect(self.send_message)
+        self.timer = QTimer()
+        self.timer.setInterval(500)  # Process clicks every 500ms
+        self.timer.timeout.connect(self.send_message_db)
+        self.timer.start()  # Starts the throttling mechanism
 
         self.main_layout.addWidget(self.input_field)
         self.main_layout.addWidget(self.send_button)
     
+    def send_message_db(self):
+        self.send_message_db = False
+    
     def send_message(self):
-        message = self.input_field.text().strip()
-        if config["send_type"] == "user":
-            user = config["selected_user"] 
-            if message and user:
-                self.add_message({"user": "you", "message": message})
-                msg = client.gen_message("message_user", [user, message], "chat", config["token"])
-                client.cross_comminication_queues["chat_message"].put_nowait(msg)
-                client.receieve_events["send_message"].set()
-                self.input_field.clear()
-            else:
-                print("invalid text or no selected user to dm")
-        elif config["send_type"] == "group":
-            if config["selected_group"] != False:
-                if config["selected_group"] == "global":
-                    self.add_message({"user": "[global] you", "message": message})
-                    msg = client.gen_message("message_group", [config["selected_group"], message], "chat", config["token"])
+        if not self.send_db:
+            self.send_db = True
+            message = self.input_field.text().strip()
+            if config["send_type"] == "user":
+                user = config["selected_user"] 
+                if message and user:
+                    msg = client.gen_message("message_user", [user, message], "chat", config["token"])
                     client.cross_comminication_queues["chat_message"].put_nowait(msg)
                     client.receieve_events["send_message"].set()
                     self.input_field.clear()
+                else:
+                    print("invalid text or no selected user to dm")
+            elif config["send_type"] == "group":
+                if config["selected_group"] != False:
+                    if config["selected_group"] == "global":
+                        msg = client.gen_message("message_group", [config["selected_group"], message], "chat", config["token"])
+                        client.cross_comminication_queues["chat_message"].put_nowait(msg)
+                        client.receieve_events["send_message"].set()
+                    self.input_field.clear()
+            time.sleep(0.3)
+            self.send_db = False
 
     def add_message(self, data):
         username = data["user"]
