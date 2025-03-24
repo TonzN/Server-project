@@ -471,4 +471,8 @@ async def run_server():
 async def main():
     await run_server()
 
-asyncio.run(main())
+def test_thread():
+    asyncio.run(main())
+
+for i in range(2):
+    threading.Thread(target=test_thread).start()
