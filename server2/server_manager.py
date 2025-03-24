@@ -457,22 +457,30 @@ async def client_handler(websocket, path=None):
 
         elapsed_time = time.time() - start_time
         sleep_interval = max(0.01, min(0.1, sleep_interval * (1.1 if elapsed_time < sleep_interval else 0.9)))
-        await asyncio.sleep(sleep_interval)  # dynamically adjusted sleep interval
- 
-async def run_server(i):
-    """Starts the WebSocket server."""
-    server = await websockets.serve(client_handler, HOST, PORT+i, ping_interval=None)
-    print(f"WebSocket Server running on ws://{HOST}:{PORT}")
-    
-    await server.wait_closed()  # Keeps server running
-    print("closing server")
+        await asyncio.sleep(sleep_interval)  # dynamically adjusted sleep interva
 
+async def run_server(i):
+    """Starts the WebSocket server on a unique port."""
+    port = PORT + i
+    server = await websockets.serve(client_handler, HOST, port, ping_interval=None)
+    print(f"WebSocket Server running on ws://{HOST}:{port}")
     
-async def main(i):
-    await run_server(i)
+    await server.wait_closed()  # Keeps the server running
 
 def test_thread(i):
-    asyncio.run(main(i))
+    """Runs an asyncio event loop in a separate thread."""
+    loop = asyncio.new_event_loop()  # Create a new event loop for this thread
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(run_server(i))
 
+# Launch multiple WebSocket servers on different ports
 for i in range(2):
-    threading.Thread(target=test_thread, args=(i)).start()
+    threading.Thread(target=test_thread, args=(i,), daemon=True).start()
+
+# Keep the main thread alive
+while True:
+    try:
+        asyncio.sleep(1)  # Prevent main thread from exiting
+    except KeyboardInterrupt:
+        print("Exiting...")
+        break
