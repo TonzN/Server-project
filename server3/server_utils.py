@@ -52,6 +52,7 @@ def gen_user_id():
     id += creation_id
     config["user_count"]
     return id
+    
 
 def generate_token():
     payload = {
