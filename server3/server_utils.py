@@ -67,10 +67,14 @@ def validate_token(token):
 
 def get_user_profile(token):
     try:
+        print(token)
         payload = validate_token(token)
         if payload:
+            print(payload)
             session_key = payload["session_key"]
+            profile(session_key)
             profile = get_profile(session_key)
+            print(profile)
             if profile:
                 return profile
             else:
