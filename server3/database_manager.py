@@ -54,7 +54,7 @@ def remove_group(group_name):
         del _groups[group_name]
 
 def get_user_profile(token):
-    payload = 0(token)
+    payload = (token)
     if payload:
         session_key = payload["session_key"]
         if session_key in _user_profiles:
