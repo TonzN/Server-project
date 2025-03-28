@@ -7,19 +7,15 @@ def verify_user(user_data):
         username = user_data["username"]
         password = user_data["password"]
         token = user_data["token"]
-        print(user_data)
 
     except Exception as e:
         print("invalid data provided")
         return 0
     
     try:
-        print(f"Verifying user {username} with token {token}")
         userfile = get_user_json_profile(username)
-        print(f"Userfile: {userfile}")
         if userfile:
-            profile = get_user_profile(token)
-            print(f"Profile: {profile}")
+            profile = utils.get_user_profile(token)
             if not profile:
                 if utils.verify_password(userfile["password"], password):
                     return 1
@@ -31,7 +27,7 @@ def verify_user(user_data):
     return 0
 
 def get_permission_level(msg, token):
-    user = get_user_profile(token)
+    user = utils.get_user_profile(token)
     if user["id"]:
         try:
             username = user["name"]
@@ -53,7 +49,7 @@ def change_persmission_level(data, token):
     if not target_userfile:
         return "Target user does not exist"
 
-    profile = get_user_profile(token) #gets session profile from token
+    profile = utils.get_user_profile(token) #gets session profile from token
     if profile: 
         username = profile["name"]
         userfile = get_user_json_profile(username) #gets user profile 

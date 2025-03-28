@@ -53,18 +53,6 @@ def remove_group(group_name):
         _groups[group_name] = None
         del _groups[group_name]
 
-def get_user_profile(token):
-    payload = (token)
-    if payload:
-        session_key = payload["session_key"]
-        if session_key in _user_profiles:
-            return _user_profiles[session_key]
-        else:
-            return False
-    else:
-        print(f"INVALID TOKEN {token}")
-        return False
-
 def get_user_json_profile(user):
     try:
         if user in users_file:
