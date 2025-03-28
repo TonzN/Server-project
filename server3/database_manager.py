@@ -66,9 +66,13 @@ def get_user_profile(token):
         return False
 
 def get_user_json_profile(user):
-    if user in users_file:
-        return users_file[user]
-    else:
+    try:
+        if user in users_file:
+            return users_file[user]
+        else:
+            return False
+    except Exception as e:
+        print(f"Could not retrieve user json profile {e}")
         return False
 
 def update_user_json_profile(user, profile):

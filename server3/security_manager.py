@@ -13,9 +13,12 @@ def verify_user(user_data):
         return 0
     
     try:
+        print(f"Verifying user {username} with token {token}")
         userfile = get_user_json_profile(username)
+        print(f"Userfile: {userfile}")
         if userfile:
             profile = get_user_profile(token)
+            print(f"Profile: {profile}")
             if not profile:
                 if utils.verify_password(userfile["password"], password):
                     return 1
