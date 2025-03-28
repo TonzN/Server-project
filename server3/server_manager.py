@@ -111,6 +111,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
                 if function == "message_user" or function == "message_group": #functions with unique cases needs its own call
                     response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
                 elif token: #function requires authentication
+                    print(str(globals()[func_keys[function]]))
                     response = str(globals()[func_keys[function]](msg, token)) 
                 else: #function with no authentication
                     response = str(globals()[func_keys[function]](msg)) 
