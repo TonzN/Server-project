@@ -1,4 +1,5 @@
 from loads import *
+from database_manager import *
 
 secret_key = "ving78"
 server_rsa_key = None
@@ -9,28 +10,6 @@ ph = PasswordHasher()
 
 blacklisted_tokens = {}
 client_keys = { }
-_user_profiles = {}
-_online_users = {}
-groups = {"global"}
-
-def get_user(user):
-    if user in _online_users:
-        return _online_users[user]
-    else:
-        return None
-
-def get_profile(key):
-    if key in _user_profiles[key]:
-        return _user_profiles[key]
-
-def add_user(user, user_profile):
-    pass
-
-def remove_user(user):
-    pass
-
-def add_profile(key):
-    pass
 
 def hash_password(password):
     """Hashes a password using Argon2."""
@@ -52,10 +31,28 @@ def gen_user_id():
     id += creation_id
     config["user_count"]
     return id
-    
 
-def generate_token():
+def get_id(msg, token):
+    user = get_user_profile(token)
+    if user:
+        username = user["name"]
+        id  = user["id"]
+        return f"#{id}"
+    
+    return "Unverfied token"
+
+def generate_temp_token():
     payload = {
+    "session_key": str(uuid.uuid4()),
+    "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)  # Token expires in 1 hour
+    }
+    # Encode the token
+    token = jwt.encode(payload, super_duper_secret_key, algorithm='HS256')
+    return token
+
+def generate_token(username):
+    payload = {
+    "username": username,
     "session_key": str(uuid.uuid4()),
     "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)  # Token expires in 1 hour
     }
@@ -77,3 +74,4 @@ def validate_token(token):
     except jwt.InvalidTokenError:
         print("Invalid token.")
         return None
+

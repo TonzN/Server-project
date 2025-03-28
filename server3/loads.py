@@ -5,16 +5,16 @@ import time
 #import pycryptodome 
 import os
 import jwt
+import asyncio
 import datetime
 import ast
-from loads import *
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
-import base64
 
-config_path = "server2/config.json" #incase path changes
-users_path = "server2/users.json"
+
+config_path = "server3/config.json" #incase path changes
+users_path = "server3/users.json"
 
 #load paths
 try: #attempt fetching configs
@@ -32,7 +32,7 @@ except Exception as e:
 
 try: #attempt fetching users
     with open(users_path, 'r') as file:
-        users = json.load(file)
+        users_file = json.load(file)
         print("JSON file loaded successfully!")
 except FileNotFoundError:
     print(f"Error: The file '{users_path}' does not exist.")
