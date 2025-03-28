@@ -20,8 +20,14 @@ def remove_user(user):
         del _online_users[user]
 
 def get_profile(key):
-    if key in _user_profiles[key]:
-        return _user_profiles[key]
+    try:
+        if key in _user_profiles[key]:
+            return _user_profiles[key]
+        else:
+            return False
+    except Exception as e:
+        print(f"Database->get_profile: {e}")
+        return False
 
 def add_profile(key, profile):
     try:

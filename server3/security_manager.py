@@ -7,17 +7,16 @@ def verify_user(user_data):
         username = user_data["username"]
         password = user_data["password"]
         token = user_data["token"]
-        print(f"USERDATA {user_data} \n")
 
     except Exception as e:
-        print("invalid data provided")
+        print(f"invalid data provided {e}")
         return 0
     
     try:
         userfile = get_user_json_profile(username)
         if userfile:
             profile = utils.get_user_profile(token)
-            print(profile)
+            print("\nPROFILE", profile)
             if not profile:
                 if utils.verify_password(userfile["password"], password):
                     return 1
