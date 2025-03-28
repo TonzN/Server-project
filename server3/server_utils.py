@@ -66,14 +66,18 @@ def validate_token(token):
         return None
 
 def get_user_profile(token):
-    payload = validate_token(token)
-    if payload:
-        session_key = payload["session_key"]
-        profile = get_profile(session_key)
-        if profile:
-            return profile
+    try:
+        payload = validate_token(token)
+        if payload:
+            session_key = payload["session_key"]
+            profile = get_profile(session_key)
+            if profile:
+                return profile
+            else:
+                return False
         else:
+            print(f"INVALID TOKEN {token}")
             return False
-    else:
-        print(f"INVALID TOKEN {token}")
+    except Exception as e:
+        print(f"Error: get_user_profile: {e}")
         return False
