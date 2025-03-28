@@ -13,8 +13,10 @@ def verify_user(user_data):
         return 0
     
     userfile = get_user_json_profile(username)
+    print(userfile)
     if userfile:
         profile = get_user_profile(token)
+        print(profile)
         if not profile:
             if utils.verify_password(userfile["password"], password):
                 return 1
