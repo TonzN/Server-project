@@ -41,18 +41,8 @@ def get_id(msg, token):
     
     return "Unverfied token"
 
-def generate_temp_token():
+def generate_token():
     payload = {
-    "session_key": str(uuid.uuid4()),
-    "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)  # Token expires in 1 hour
-    }
-    # Encode the token
-    token = jwt.encode(payload, super_duper_secret_key, algorithm='HS256')
-    return token
-
-def generate_token(username):
-    payload = {
-    "username": username,
     "session_key": str(uuid.uuid4()),
     "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)  # Token expires in 1 hour
     }
