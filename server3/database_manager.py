@@ -45,6 +45,7 @@ def get_group(group):
     try:
         print(f"Databasemanager-> get_group: {group} {_groups}")
         if group in _groups:
+            print("IT WORKS SO WHY IS IT NOT RETURNING RIGHT MUTOERHFCUIRKERES")
             return _groups[group]
         else:
             return None
