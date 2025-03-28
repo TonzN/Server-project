@@ -2,7 +2,7 @@ from loads import *
 
 _online_users = {}
 _user_profiles = {}
-_groups = {"global"}
+_groups = {"global": {}}
 
 def get_all_online_users():
     return _online_users
