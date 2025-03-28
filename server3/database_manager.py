@@ -42,11 +42,15 @@ def remove_profile(key):
         del _user_profiles[key]
 
 def get_group(group):
-    if group in _groups:
-        return _groups[group]
-    else:
-        return None
-
+    try:
+        if group in _groups:
+            return _groups[group]
+        else:
+            return None
+    except Exception as e:
+        print(f"Databasemanager-> get_group: {e}")
+        return False
+    
 def add_group(group_name, group):
     try:
         _groups[group_name] = group
