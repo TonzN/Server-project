@@ -22,7 +22,7 @@ timeout = 30 #heartbeat timout time, if a user doesnt ping the server within thi
 
 def set_client(userdata): #only used when a client joins! profile contains server data important to run clients
     try: 
-        username = userdata["user"]
+        username = userdata["username"]
         sock = userdata["socket"]
         token = userdata["token"]
     except Exception as e:

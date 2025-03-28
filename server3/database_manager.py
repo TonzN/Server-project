@@ -26,7 +26,7 @@ def get_profile(key):
         else:
             return False
     except Exception as e:
-        print(f"Database->get_profile: {e}")
+        print(f"Database->get_profile: {e}, key: {key}, profile: {_user_profiles}")
         return False
 
 def add_profile(key, profile):
