@@ -44,7 +44,7 @@ def set_client(userdata): #only used when a client joins! profile contains serve
                 profile["heartbeat"] = time.time()
                 profile["socket"] = sock
                 add_profile(session_key, profile)
-                print(f"User: {user} connected to server")
+                print(f"User: {username} connected to server")
                 return True 
             
             print("Weird things happens with token") #if something wrong happens here debug the server utils

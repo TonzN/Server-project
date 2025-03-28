@@ -10,10 +10,12 @@ async def message_group(loop, data, tag, token):
             msg = data[1]
             if get_group(group):
                 if group == "global":
-                    online_users =get_all_online_users()
+                    online_users = get_all_online_users()
+                    print(f"online users: {online_users}")
                     for user in online_users:
+                        print(user)
                         if user != profile["name"]:
-                            client_socket = online_users[user]
+                            client_socket = get_user(user)
                             response = json.dumps({"data": [{"user": "[global]"+profile["name"], "message": msg, "signal": "chat"}, "chat", ],  "signals": "chat"}) + "\n"
                             await client_socket.send(response.encode()) #to send other users messages you need their socket
                     return f"Sent message to {group}"
