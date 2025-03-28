@@ -116,7 +116,6 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
                     response = str(globals()[func_keys[function]](msg)) 
 
             except Exception as e: #sends back error message, this error means something wrong happened while running given function
-                print(str(globals()[func_keys[function]]))
                 print(f"Function is not a valid server request: {e}\n Error at: {function}")
                 response = json.dumps({"data": ["Attempted running function and failed.\n Check if the input passed is right", tag]}) + "\n"
                 await websocket.send(response.encode())

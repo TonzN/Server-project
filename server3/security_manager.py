@@ -12,15 +12,18 @@ def verify_user(user_data):
         print("invalid data provided")
         return 0
     
-    userfile = get_user_json_profile(username)
-    if userfile:
-        profile = get_user_profile(token)
-        if not profile:
-            if utils.verify_password(userfile["password"], password):
-                return 1
-            else:
-                return 0
-        return 2
+    try:
+        userfile = get_user_json_profile(username)
+        if userfile:
+            profile = get_user_profile(token)
+            if not profile:
+                if utils.verify_password(userfile["password"], password):
+                    return 1
+                else:
+                    return 0
+            return 2
+    except Exception as e:
+        print(f"Error retrieving user profile: {e}")
     return 0
 
 def get_permission_level(msg, token):
