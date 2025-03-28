@@ -6,6 +6,7 @@ async def message_group(loop, data, tag, token):
     try:
         profile = get_user_profile(token)
         if profile:
+            print("data", data)
             group = data[0]
             msg = data[1]
             if get_group(group):
