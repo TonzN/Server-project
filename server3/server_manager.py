@@ -111,12 +111,12 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
                 if function == "message_user" or function == "message_group": #functions with unique cases needs its own call
                     response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
                 elif token: #function requires authentication
-                    print(str(globals()[func_keys[function]]))
                     response = str(globals()[func_keys[function]](msg, token)) 
                 else: #function with no authentication
                     response = str(globals()[func_keys[function]](msg)) 
 
             except Exception as e: #sends back error message, this error means something wrong happened while running given function
+                print(str(globals()[func_keys[function]]))
                 print(f"Function is not a valid server request: {e}\n Error at: {function}")
                 response = json.dumps({"data": ["Attempted running function and failed.\n Check if the input passed is right", tag]}) + "\n"
                 await websocket.send(response.encode())
