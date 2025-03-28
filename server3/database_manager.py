@@ -43,6 +43,7 @@ def remove_profile(key):
 
 def get_group(group):
     try:
+        print(f"Databasemanager-> get_group: {group} {_groups}")
         if group in _groups:
             return _groups[group]
         else:
