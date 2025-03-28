@@ -1,8 +1,9 @@
 from loads import *
+import group_manager
 
 _online_users = {}
 _user_profiles = {}
-_groups = {"global": {}}
+_groups = {"global": group_manager.Group("global")}
 
 def get_all_online_users():
     return _online_users
@@ -43,9 +44,7 @@ def remove_profile(key):
 
 def get_group(group):
     try:
-        print(f"Databasemanager-> get_group: {group} {_groups}")
         if group in _groups:
-            print("IT WORKS SO WHY IS IT NOT RETURNING RIGHT MUTOERHFCUIRKERES")
             return _groups[group]
         else:
             return None
