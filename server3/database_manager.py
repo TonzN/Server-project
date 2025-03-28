@@ -3,7 +3,7 @@ import group_manager
 
 _online_users = {}
 _user_profiles = {}
-_groups = {"global": group_manager.Group("global")}
+_groups = {"global": group_manager.GroupChat("global")}
 
 def get_all_online_users():
     return _online_users
