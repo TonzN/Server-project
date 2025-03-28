@@ -29,7 +29,7 @@ def set_client(userdata): #only used when a client joins! profile contains serve
         print(f"invalid userdata {user} {sock} {e}")
         return False
     
-    if verify_user(userdata):
+    if verify_user(userdata) == 1:
         user = get_user(username)
         if not user: #prevents same user being connected from 2 sessions
             payload = utils.validate_token(token) 
@@ -264,8 +264,12 @@ async def client_handler(websocket, path=None):
     # If the token is valid, enter the main loop
     client_is_connected = True 
     profile = get_user_profile(token) #fethes profile so the handler knows which user to pull from
-    username = profile["name"]
-    add_user(username, websocket)
+    if profile:
+        username = profile["name"]
+        add_user(username, websocket)
+    else:
+        await safe_client_disconnect(websocket, loop, None, token)
+        return
     buffer_attemps = 3
    
     sleep_interval = 0.1  # initial sleep interval

@@ -16,7 +16,6 @@ def verify_user(user_data):
         userfile = get_user_json_profile(username)
         if userfile:
             profile = utils.get_user_profile(token)
-            print("\nPROFILE", profile)
             if not profile:
                 if utils.verify_password(userfile["password"], password):
                     return 1

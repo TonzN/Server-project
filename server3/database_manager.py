@@ -21,7 +21,7 @@ def remove_user(user):
 
 def get_profile(key):
     try:
-        if key in _user_profiles[key]:
+        if key in _user_profiles:
             return _user_profiles[key]
         else:
             return False
