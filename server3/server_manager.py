@@ -196,8 +196,8 @@ def create_user(user_data): #userdata must be sent from the client as a dictiona
     token = user_data["token"]
     hashed_password = utils.hash_password(password)
     if utils.validate_token(token):
-        user = get_user_json_profile(token)
-        if user: #checks if user is registered, if not registered create user
+        user = get_user_json_profile(username)
+        if not user: #checks if user is registered, if not registered create user
             """User data that has to be included when created, dont remove any of it but you can add"""
             profile = {} 
             profile["username"] = username 
