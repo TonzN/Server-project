@@ -211,7 +211,7 @@ def create_user(user_data): #userdata must be sent from the client as a dictiona
             profile["securitymode"] = "normal"
             profile["friend_requests"] = {}
             profile["preferences"] = {}
-            add_user_json_profile(user, profile)
+            add_user_json_profile(username, profile)
             update_users_count() #this updates user count to make sure next generated id is unique
             update_users_json_file()
             return 1

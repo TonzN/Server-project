@@ -38,11 +38,15 @@ def update_users_count(amount = 1):
 
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
     if token:
-        user = get_user_profile(token)
-        if user:
-            if msg == "ping":
-                print("ping")
-            user["heartbeat"] = time.time()
-            return "pong"
-        else:
-            print(f"missing token | {user["name"]}")
+        try:
+            user = get_user_profile(token)
+            if user:
+                if msg == "ping":
+                    print("ping")
+                user["heartbeat"] = time.time()
+                return "pong"
+            else:
+                print(f"missing token | {user["name"]}")
+        except Exception as e:
+            print(f"Error pinging user: {e}")
+            return False
