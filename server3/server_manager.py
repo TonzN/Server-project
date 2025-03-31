@@ -26,7 +26,7 @@ def set_client(userdata): #only used when a client joins! profile contains serve
         sock = userdata["socket"]
         token = userdata["token"]
     except Exception as e:
-        print(f"invalid userdata {username} {sock} {e}")
+        print(f"invalid userdata {e}")
         return False
     
     if verify_user(userdata) == 1:

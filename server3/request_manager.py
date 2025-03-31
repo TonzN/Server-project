@@ -40,7 +40,7 @@ def ping(msg, token=None): #updates users heartbeat time to maintain status heal
     if token:
         try:
             user = get_user_profile(token)
-            if user:
+            if user == True:
                 if msg == "ping":
                     print("ping")
                 user["heartbeat"] = time.time()
