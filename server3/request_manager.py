@@ -48,5 +48,5 @@ def ping(msg, token=None): #updates users heartbeat time to maintain status heal
             else:
                 print(f"missing token | {user["name"]}")
         except Exception as e:
-            print(f"Error pinging user: {e}")
+            print(f"Error pinging user: {e}\nuser: {user}")
             return False
