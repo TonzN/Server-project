@@ -15,7 +15,7 @@ def with_db_connection():
     def _with_db_connection(func):
         """Decorator to manage database connections.  """
         async def wrapper(*args, **kwargs):
-            _db_pool = server_pool.get_pool(_db_pool) #get the pool
+            _db_pool = server_pool.get_pool("main_pool") #get the pool
             if _db_pool is None:
                 raise RuntimeError("DB pool not initialized")
             try:
