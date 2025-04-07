@@ -6,7 +6,6 @@ import time
 import os
 import server_utils as utils
 from loads import *
-from message_manager import *
 
 HOST = config["HOST"]
 PORT = config["PORT"]
