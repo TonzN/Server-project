@@ -67,12 +67,19 @@ def close_all_connections(_db_pool):
         print(f"Error closing all connections: {e}")    
 
 async def test_db():
-    conn = await pg.connect(
-        host="database.cf0yoiaesmqc.eu-north-1.rds.amazonaws.com",
-        port="5432",
-        user="postgres",
-        password="toniNyt05#2030",
-    )
+    print("\n Testing database connection...")
+    try:
+        conn = await pg.connect(
+            host="database.cf0yoiaesmqc.eu-north-1.rds.amazonaws.com",
+            port="5432",
+            user="postgres",
+            password="toniNyt05#2030",
+        )
+    except Exception as e:
+        print(f"test_db->Error connecting to database: {e}")
+        return
+    
+    print(f"\nConneection: {conn} ")
     # Show all table names in the public schema
     rows = await conn.fetch(
         """
@@ -82,7 +89,7 @@ async def test_db():
         """
     )
 
-    print("Tables:")
+    print("\n Getting tables... \nTables:")
     for row in rows:
         print("-", row['table_name'])
 

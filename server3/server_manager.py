@@ -237,7 +237,6 @@ async def client_handler(websocket, path=None):
     Login sequence HAS to go thru to make sure only registered users enters the main loop.
     """
     print(f"New WebSocket connection from {websocket.remote_address}, path: {path}")
-    print(await db_get_user_profile("Toni"))
     loop = asyncio.get_running_loop()
     timeout = 30
     if not hasattr(utils, 'generate_token'):
@@ -311,7 +310,11 @@ async def run_server():
 
 async def main():
     await server_pool.initialize()
-    await test_db()
+    db_connection = await test_db()
+    if not db_connection:
+        print("Could not connect to database, closing server")
+        return
+    
     pool = server_pool.get_pool("main_pool")
     print(await db_get_user_profile("Toni"))
     await run_server()
