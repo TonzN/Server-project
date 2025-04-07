@@ -150,8 +150,16 @@ def update_users_json_file(): #depricated
 @with_db_connection()
 async def db_get_user_profile(conn, id):
     try:
-        print("CONNECTION: ", conn)
-        print(await conn.fetch("SELECT * FROM users"))
+        isempty = await conn.fetch("SELECT * FROM users")
+        if len(isempty) == 0:
+            rows = await conn.fetch("""
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_name = 'users'
+            """)
+            for r in rows:
+                print(r)
+
         return  await conn.fetch("SELECT * FROM users WHERE username = $1", id)  
     except Exception as e:
         print(f"db_get_user_profile->Error: {e}")
