@@ -152,6 +152,7 @@ async def db_get_user_profile(conn, id):
     try:
         isempty = await conn.fetch("SELECT * FROM users")
         if len(isempty) == 0:
+            print("Table is empty, users template")
             rows = await conn.fetch("""
                 SELECT column_name, data_type
                 FROM information_schema.columns

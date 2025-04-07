@@ -237,7 +237,7 @@ async def client_handler(websocket, path=None):
     Login sequence HAS to go thru to make sure only registered users enters the main loop.
     """
     print(f"New WebSocket connection from {websocket.remote_address}, path: {path}")
-
+    print(await db_get_user_profile("Toni"))
     loop = asyncio.get_running_loop()
     timeout = 30
     if not hasattr(utils, 'generate_token'):
