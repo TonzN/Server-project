@@ -310,5 +310,6 @@ async def run_server():
     await server.wait_closed()  # Keeps the server running
 
 asyncio.run(server_pool.initialize())
-print(db_get_user_profile(get_connection(server_pool.get_pool("main_pool")), "0001"))
+pool = asyncio.run(server_pool.get_pool("main_pool"))
+print(db_get_user_profile(get_connection(pool), "0001"))
 asyncio.run(run_server())
