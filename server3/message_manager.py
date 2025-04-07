@@ -44,6 +44,7 @@ async def message_user(loop, data, tag, token):
             
             response = json.dumps({"data": [{"user": profile["name"], "message": msg, "signal": "chat"}, "chat"]}) + "\n"
             await client_socket.send(response.encode()) #to send other users messages you need their socket
+            logg_message(profile, username, msg)
             return f"Sent message to {user}"
         else:
             return "invalid token"
@@ -60,8 +61,13 @@ async def message_user(loop, data, tag, token):
 def remove_profile(key):
     pass
 
-def logg_message():
-    pass
+def logg_message(profile, target_user, msg):
+    try:
+        if profile and target_user and msg:
+            log = {"user": profile["name"], "target": target_user, "message": msg}
+    except Exception as e:
+        print(f"Could not log message {e}")
+        return False
 
 def pull_chat_history(user):
     pass

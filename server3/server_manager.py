@@ -18,6 +18,8 @@ func_keys = config["function_keys"]
 recieve_timeout = 9 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
 standby_time = 60*5 #time you allow someone to be trying to login
 timeout = 30 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
+server_pool = PoolManager()
+server_pool.add_pool("main_pool", asyncio.run(setup_db_connectionpool())) #pool for the main server, this is used to manage the connections to the database, if you have multiple servers you can add more pools here
 #all functrions created must have an id passed
 
 def set_client(userdata): #only used when a client joins! profile contains server data important to run clients
@@ -26,7 +28,7 @@ def set_client(userdata): #only used when a client joins! profile contains serve
         sock = userdata["socket"]
         token = userdata["token"]
     except Exception as e:
-        print(f"invalid userdata {user} {sock} {e}")
+        print(f"invalid userdata {e}")
         return False
     
     if verify_user(userdata) == 1:
@@ -196,8 +198,8 @@ def create_user(user_data): #userdata must be sent from the client as a dictiona
     token = user_data["token"]
     hashed_password = utils.hash_password(password)
     if utils.validate_token(token):
-        user = get_user_json_profile(token)
-        if user: #checks if user is registered, if not registered create user
+        user = get_user_json_profile(username)
+        if not user: #checks if user is registered, if not registered create user
             """User data that has to be included when created, dont remove any of it but you can add"""
             profile = {} 
             profile["username"] = username 
@@ -211,7 +213,7 @@ def create_user(user_data): #userdata must be sent from the client as a dictiona
             profile["securitymode"] = "normal"
             profile["friend_requests"] = {}
             profile["preferences"] = {}
-            add_user_json_profile(user, profile)
+            add_user_json_profile(username, profile)
             update_users_count() #this updates user count to make sure next generated id is unique
             update_users_json_file()
             return 1
@@ -303,9 +305,9 @@ async def client_handler(websocket, path=None):
 async def run_server():
     """Starts the WebSocket server on a unique port."""
     port = PORT 
-    server = await websockets.serve(client_handler, HOST, port, ping_interval=None)
+    server = await websockets.serve(client_handler, HOST, port, ping_interval=None, )
     print(f"WebSocket Server running on ws://{HOST}:{port} ")
     
     await server.wait_closed()  # Keeps the server running
-
+   
 asyncio.run(run_server())
