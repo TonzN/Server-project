@@ -18,8 +18,7 @@ func_keys = config["function_keys"]
 recieve_timeout = 9 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
 standby_time = 60*5 #time you allow someone to be trying to login
 timeout = 30 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
-server_pool = PoolManager()
-server_pool.add_pool("main_pool", asyncio.run(setup_db_connectionpool())) #pool for the main server, this is used to manage the connections to the database, if you have multiple servers you can add more pools here
+
 #all functrions created must have an id passed
 
 def set_client(userdata): #only used when a client joins! profile contains server data important to run clients
@@ -309,5 +308,6 @@ async def run_server():
     print(f"WebSocket Server running on ws://{HOST}:{port} ")
     
     await server.wait_closed()  # Keeps the server running
-   
+
+asyncio.run(server_pool.initialize())
 asyncio.run(run_server())
