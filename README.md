@@ -1,4 +1,16 @@
 # super-server
+# Server 3
+Overhauled backend design
+AWS cloud database
+Added: 
+    Database manager
+    Message manager
+    Group manager
+    Thread manager
+    Security Manager
+
+Automatic pooling and connection management to the database
+
 # Server 2
 -----Server------
 Aws based cloud server using EC2
