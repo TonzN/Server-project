@@ -311,6 +311,7 @@ async def run_server():
 
 async def main():
     await server_pool.initialize()
+    await test_db()
     pool = server_pool.get_pool("main_pool")
     print(await db_get_user_profile("Toni"))
     await run_server()

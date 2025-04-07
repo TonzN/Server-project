@@ -28,7 +28,6 @@ async def setup_db_connectionpool():
     try:
         pool = await pg.create_pool(
             host="database.cf0yoiaesmqc.eu-north-1.rds.amazonaws.com",
-            database="database",
             port="5432",
             user="postgres",
             password="toniNyt05#2030",
@@ -66,3 +65,27 @@ def close_all_connections(_db_pool):
             _db_pool.close()
     except Exception as e:
         print(f"Error closing all connections: {e}")    
+
+async def test_db():
+    conn = await pg.connect(
+        host="database.cf0yoiaesmqc.eu-north-1.rds.amazonaws.com",
+        port="5432",
+        user="postgres",
+        password="toniNyt05#2030",
+        min_size = 1,   
+        max_size = 10
+    )
+    # Show all table names in the public schema
+    rows = await conn.fetch(
+        """
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+        """
+    )
+
+    print("Tables:")
+    for row in rows:
+        print("-", row['table_name'])
+
+    await conn.close()
