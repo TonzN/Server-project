@@ -72,8 +72,6 @@ async def test_db():
         port="5432",
         user="postgres",
         password="toniNyt05#2030",
-        min_size = 1,   
-        max_size = 10
     )
     # Show all table names in the public schema
     rows = await conn.fetch(
