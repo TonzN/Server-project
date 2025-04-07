@@ -148,8 +148,9 @@ def update_users_json_file(): #depricated
  #   raise RuntimeError("Database_manager->waitfor(main_pool)-> Could not get main pool")
 
 @with_db_connection()
-def db_get_user_profile(conn, id):
+async def db_get_user_profile(conn, id):
     try:
+        print(await conn.fetchrow("SELECT * FROM users"))
         return  conn.fetchrow("SELECT * FROM users WHERE username = $1", id)  
     except Exception as e:
         print(f"db_get_user_profile->Error: {e}")
