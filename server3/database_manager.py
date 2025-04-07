@@ -150,7 +150,7 @@ def update_users_json_file(): #depricated
 @with_db_connection()
 def db_get_user_profile(conn, id):
     try:
-        return  conn.fetchrow("SELECT * FROM users WHERE id = $1", id)  
+        return  conn.fetchrow("SELECT * FROM users WHERE username = $1", id)  
     except Exception as e:
         print(f"db_get_user_profile->Error: {e}")
         return None
