@@ -151,7 +151,7 @@ def update_users_json_file(): #depricated
 async def db_get_user_profile(conn, id):
     try:
         print(await conn.fetchrow("SELECT * FROM users"))
-        return  conn.fetchrow("SELECT * FROM users WHERE username = $1", id)  
+        return  await conn.fetchrow("SELECT * FROM users WHERE username = $1", id)  
     except Exception as e:
         print(f"db_get_user_profile->Error: {e}")
         return None
