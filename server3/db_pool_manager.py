@@ -67,7 +67,7 @@ def close_all_connections(_db_pool):
         print(f"Error closing all connections: {e}")    
 
 async def test_db():
-    print("\n Testing database connection...")
+    print("\nTesting database connection...")
     try:
         conn = await pg.connect(
             host="database.cf0yoiaesmqc.eu-north-1.rds.amazonaws.com",
@@ -79,18 +79,25 @@ async def test_db():
         print(f"test_db->Error connecting to database: {e}")
         return
     
-    print(f"\nConneection: {conn} ")
+    print(f"\tTest conneection: {conn} ")
     # Show all table names in the public schema
-    rows = await conn.fetch(
-        """
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema = 'public'
-        """
-    )
+    try:
+        rows = await conn.fetch(
+            """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+            """
+        )
+    except Exception as e:
+        print("Unable to get tables from database")
+        print(f"test_db->Error fetching table names: {e}")
+        return 
 
-    print("\n Getting tables... \nTables:")
+    print("\n Getting tables... \nTables:\n")
     for row in rows:
         print("-", row['table_name'])
 
     await conn.close()
+
+    return True
