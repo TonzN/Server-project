@@ -310,7 +310,7 @@ async def run_server():
 
 async def main():
     await server_pool.initialize()
-    db_connection = await()
+    db_connection = await test_db()
     if not db_connection:
         print("Could not connect to database, closing server")
         return
