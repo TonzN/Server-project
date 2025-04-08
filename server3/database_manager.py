@@ -186,7 +186,7 @@ async def db_add_user_profile(conn, user_data):
        This is used for single inserts"""
     try:
          return await conn.execute("INSERT INTO users "
-        "(username, password, id, permission_level, securitymode) "
+        "(username, password, id, permission_level, security_mode) "
         "VALUES ($1, $2, $3, $4, $5)", *user_data)
     except Exception as e:
         print(f"db_add_user_profile->Error: {e}")
@@ -201,7 +201,7 @@ async def db_add_multiple_user_profile(conn, user_data):
        This is used for bulk inserts"""
     try:
         return await conn.executemany("INSERT INTO users "
-        "(username, password, id, permission_level, securitymode) "
+        "(username, password, id, permission_level, security_mode) "
         "VALUES ($1, $2, $3, $4, $5)", user_data)
     
     except Exception as e:

@@ -13,7 +13,8 @@ async def run_update():
     if not db_connection:
         print("Could not connect to database, closing server")
         return
-    print("\n\tUpdating users")
+    print("Connected to database")
+    print("\n\tUpdating users\n")
     print(ordered_users)
     await database_manager.db_add_multiple_user_profile(ordered_users)
 

@@ -310,12 +310,14 @@ async def run_server():
 
 async def main():
     await server_pool.initialize()
-    db_connection = await test_db()
+    db_connection = await()
     if not db_connection:
         print("Could not connect to database, closing server")
         return
-    
+    print("Connected to database")
+    print("\n checking users table\n")
     print(await db_get_user_profile("Toni"))
+    print("\nStarting server...")
     await run_server()
 
 asyncio.run(main())
