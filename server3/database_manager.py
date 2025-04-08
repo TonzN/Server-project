@@ -179,13 +179,13 @@ async def db_get_user_profile(conn, username):
         return None
 
 @with_db_connection()
-def db_add_user_profile(conn, user_data):
+async def db_add_user_profile(conn, user_data):
     """Add user profile to database. Connected by the pool manager.\n
        user_data = array or list of user data\n
        conn: automatically handled by the pool manager\n
        This is used for single inserts"""
     try:
-        return conn.execute("INSERT INTO users "
+         return await conn.execute("INSERT INTO users "
         "(username, password, id, permission_level, securitymode) "
         "VALUES ($1, $2, $3, $4, $5)", *user_data)
     except Exception as e:
@@ -193,14 +193,14 @@ def db_add_user_profile(conn, user_data):
         return None
 
 @with_db_connection()
-def db_add_multiple_user_profile(conn, user_data):
+async def db_add_multiple_user_profile(conn, user_data):
     """
        Add user profile to database. Connected by the pool manager\n 
        user_data = array or list of user data\n
        conn: automatically handled by the pool manager\n
        This is used for bulk inserts"""
     try:
-        return conn.executemany("INSERT INTO users "
+        return await conn.executemany("INSERT INTO users "
         "(username, password, id, permission_level, securitymode) "
         "VALUES ($1, $2, $3, $4, $5)", user_data)
     
