@@ -1,2 +1,9 @@
 myenv/
 server3/users.json
+server3/test.py
+server3/__pycache__
+server3/__pycache__/
+server3/__pycache__/*.pyc
+server3/__pycache__/*.pyo
+server3/__pycache__/*.pyd
+
