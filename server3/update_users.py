@@ -5,11 +5,19 @@ import asyncio
 
 loads.time.sleep(1)
 
-users = [database_manager.get_user_json_profile(user) for user in database_manager.get_all_users_json_profile()]
-ordered_users = server_utils.json_to_arr_ordered(users, ("username", "password", "id", "permission_level", "securitymode"))
-print(ordered_users)
-asyncio.run(database_manager.db_add_multiple_user_profile(ordered_users))
+async def run_update():
+    users = [database_manager.get_user_json_profile(user) for user in database_manager.get_all_users_json_profile()]
+    ordered_users = server_utils.json_to_arr_ordered(users, ("username", "password", "id", "permission_level", "securitymode"))   
+    await database_manager.server_pool.initialize()
+    db_connection = await database_manager.test_db()
+    if not db_connection:
+        print("Could not connect to database, closing server")
+        return
+    print("\n\tUpdating users")
+    print(ordered_users)
+    await database_manager.db_add_multiple_user_profile(ordered_users)
 
+asyncio.run(run_update())
 
 update_json_data = False
 if update_json_data:
