@@ -315,7 +315,6 @@ async def main():
         print("Could not connect to database, closing server")
         return
     
-    pool = server_pool.get_pool("main_pool")
     print(await db_get_user_profile("Toni"))
     await run_server()
 

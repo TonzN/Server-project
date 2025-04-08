@@ -46,9 +46,13 @@ def wait_for(function, max_wait=5, *args, **kwargs):
 #quick lookup for cached data
 #--------------------------------------#
 def get_all_online_users():
+    """Get all online users from the online users list
+       Returns a list of all online users"""
     return _online_users
 
 def get_user(user):
+    """Get user from the online users list
+       Returns the socket of the user if found"""
     if user in _online_users:
         return _online_users[user]
 
@@ -56,18 +60,22 @@ def add_user(user, socket):
     _online_users[user] = socket
 
 def remove_user(user):
+    """Remove user from the online users list
+       Returns True if user was removed, False if user was not found"""
     if user in _online_users:
         _online_users[user] = None
         del _online_users[user]
 
 def get_profile(key):
+    """Get user profile from the user profiles list
+       Returns the profile of the user if found"""
     try:
         if key in _user_profiles:
             return _user_profiles[key]
         else:
             return False
     except Exception as e:
-        print(f"Database->get_profile: {e}, key: {key}, profile: {_user_profiles}")
+        print(f"Database_manager->get_profile: {e}, key: {key}, profile: {_user_profiles}")
         return False
 
 def add_profile(key, profile):
@@ -114,6 +122,9 @@ def get_user_json_profile(user):
         print(f"Could not retrieve user json profile {e}")
         return False
 
+def get_all_users_json_profile():
+    return users_file
+
 def update_user_json_profile(user, profile): #depricated
     try:
         if user in users_file:
@@ -148,10 +159,11 @@ def update_users_json_file(): #depricated
  #   raise RuntimeError("Database_manager->waitfor(main_pool)-> Could not get main pool")
 
 @with_db_connection()
-async def db_get_user_profile(conn, id):
+async def db_get_user_profile(conn, username):
+    """Get user profile from database. Connected by the pool manager"""
     try:
         isempty = await conn.fetch("SELECT * FROM users")
-        if len(isempty) == 0:
+        if len(isempty) == 0: #for debugging incase the table is actually empty
             print("Table is empty, users template")
             rows = await conn.fetch("""
                 SELECT column_name, data_type
@@ -161,15 +173,31 @@ async def db_get_user_profile(conn, id):
             for r in rows:
                 print(r)
 
-        return  await conn.fetch("SELECT * FROM users WHERE username = $1", id)  
+        return  await conn.fetch("SELECT * FROM users WHERE username = $1", username)  
     except Exception as e:
         print(f"db_get_user_profile->Error: {e}")
         return None
 
 @with_db_connection()
-def db_add_user_profile(conn, username, password):
+def db_add_user_profile(conn, user_data):
+    """Add user profile to database. Connected by the pool manager.
+       user_data = array or list of user data"""
     try:
-        return conn.execute("INSERT INTO users (username, password, email) VALUES ($1, $2, $3)", username, password)
+        return conn.execute("INSERT INTO users "
+        "(username, password, id, permission_level, securitymode) "
+        "VALUES ($1, $2, $3, $4, $5)", *user_data)
     except Exception as e:
         print(f"db_add_user_profile->Error: {e}")
+        return None
+
+@with_db_connection()
+def db_add_multiple_user_profile(conn, user_data):
+    """Add user profile to database. Connected by the pool manager"""
+    try:
+        return conn.executemany("INSERT INTO users "
+        "(username, password, id, permission_level, securitymode) "
+        "VALUES ($1, $2, $3, $4, $5)", *user_data)
+    
+    except Exception as e:
+        print(f"db_add_multiple_user_profile->Error: {e}")
         return None

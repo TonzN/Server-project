@@ -94,10 +94,11 @@ async def test_db():
         print(f"test_db->Error fetching table names: {e}")
         return 
 
-    print("\n Getting tables... \nTables:\n")
+    print("\nGetting tables... \n\tTables:\n")
     for row in rows:
-        print("-", row['table_name'])
-
+        print("\t\t-", row['table_name'])
+    print("\n")
+    
     await conn.close()
 
     return True
