@@ -159,7 +159,7 @@ def update_users_json_file(): #depricated
 #if not main_pool:
  #   raise RuntimeError("Database_manager->waitfor(main_pool)-> Could not get main pool")
 
-@with_db_connection()
+@with_db_connection
 async def db_get_user_profile(conn, username):
     """Get user profile from database. Connected by the pool manager"""
     try:
@@ -179,6 +179,7 @@ async def db_get_user_profile(conn, username):
         print(f"db_get_user_profile->Error: {e}")
         return None
 
+@with_db_connection
 async def db_update_user_profile(conn, user_data):
     """Update user profile in database. Connected by the pool manager\n
        user_data = array or list of user data\n
@@ -196,6 +197,7 @@ async def db_update_user_profile(conn, user_data):
         print(f"db_update_user_profile->Error: {e}")
         return None
 
+@with_db_connection
 async def db_add_user_data(conn, username, value, data):
     """Add user data to database. Connected by the pool manager\n
        username = username of the user to add data to\n
@@ -208,7 +210,7 @@ async def db_add_user_data(conn, username, value, data):
         print(f"db_add_user_data->Error: {e} \n username: {username}, value: {value}, data: {data}")
         return None
     
-@with_db_connection()
+@with_db_connection
 async def db_add_user_profile(conn, user_data):
     """Add user profile to database. Connected by the pool manager.\n
        user_data = array or list of user data\n
@@ -222,7 +224,7 @@ async def db_add_user_profile(conn, user_data):
         print(f"db_add_user_profile->Error: {e}")
         return None
 
-@with_db_connection()
+@with_db_connection
 async def db_add_multiple_user_profile(conn, user_data):
     """
        Add user profile to database. Connected by the pool manager\n 
@@ -238,7 +240,7 @@ async def db_add_multiple_user_profile(conn, user_data):
         print(f"db_add_multiple_user_profile->Error: {e}")
         return None
 
-@with_db_connection()
+@with_db_connection
 async def db_update_user_profile(conn, user_data):
     """Update user profile in database. Connected by the pool manager\n
        user_data = array or list of user data\n
@@ -253,7 +255,7 @@ async def db_update_user_profile(conn, user_data):
         print(f"db_update_user_profile->Error: {e}")
         return None
 
-@with_db_connection()
+@with_db_connection
 async def db_delete_user_profile(conn, username):
     """Delete user profile from database. Connected by the pool manager\n
        username = username of the user to delete\n
@@ -264,7 +266,7 @@ async def db_delete_user_profile(conn, username):
         print(f"db_delete_user_profile->Error: {e}")
         return None
 
-@with_db_connection()
+@with_db_connection
 async def db_get_all_user_profile(conn):
     """Get all user profiles from database. Connected by the pool manager\n
        conn: automatically handled by the pool manager"""
@@ -274,7 +276,7 @@ async def db_get_all_user_profile(conn):
         print(f"db_get_all_user_profile->Error: {e}")
         return None
 
-@with_db_connection()
+@with_db_connection
 async def db_get_value_from_user(conn, value, username):
     """Get value from user profile in database. Connected by the pool manager\n
        key = key to get from the user profile\n
