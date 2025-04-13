@@ -31,7 +31,7 @@ async def set_client(userdata, token): #only used when a client joins! profile c
         print(f"invalid userdata {e}")
         return False
     
-    if verify_user(userdata) == 1:
+    if verify_user(userdata, token) == 1:
         user = get_user(username)
         if not user: #prevents same user being connected from 2 sessions
             payload = utils.validate_token(token) 
