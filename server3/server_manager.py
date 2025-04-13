@@ -117,8 +117,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
                     response = str(await globals()[func_keys[function]](msg, token))
                 elif token: 
                     response = str(globals()[func_keys[function]](msg, token)) 
-                
-                if not token:
+                elif not token:
                     response = str("WARNING: Missing token, please login again")
 
             except Exception as e: #sends back error message, this error means something wrong happened while running given function
