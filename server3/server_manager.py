@@ -191,7 +191,7 @@ async def login(websocket, loop):
                     print("Login succesfull")
                     return True 
             except Exception as e:
-                print("Error: did not set client")
+                print("login->Error: did not set client")
         print("USER NOT VERIFIED\n")
 
     return False
