@@ -23,11 +23,10 @@ timeout = 30 #heartbeat timout time, if a user doesnt ping the server within thi
 
 #all functrions created must have an id passed
 
-async def set_client(userdata): #only used when a client joins! profile contains server data important to run clients
+async def set_client(userdata, token): #only used when a client joins! profile contains server data important to run clients
     try: 
         username = userdata["username"]
         sock = userdata["socket"]
-        token = userdata["token"]
     except Exception as e:
         print(f"invalid userdata {e}")
         return False
@@ -112,7 +111,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
         if function in func_keys:  #checks if action requested exist as something the client can call for
             try:
                 print(f"Function: {function} \n Data: {msg} \n Token: {token} \n Tag: {tag}")
-                print(f"function_keys: {func_keys} \n async_function_keys: {async_function_keys} \n message_function_keys: {message_function_keys}\n")
+                print(f"function_keys: {function in func_keys} \n async_function_keys: {function in async_function_keys} \n message_function_keys: {function in message_function_keys}\n")
                 if function in message_function_keys: #functions with unique cases needs its own call
                     response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
                 elif function in async_function_keys and token: #functions that are async and need to be awaited
@@ -197,10 +196,9 @@ async def login(websocket, loop):
 
     return False
 
-async def create_user(user_data): #userdata must be sent from the client as a dictionary with username and password
+async def create_user(user_data, token): #userdata must be sent from the client as a dictionary with username and password
     username = user_data["username"]
     password = user_data["password"]
-    token = user_data["token"]
     hashed_password = utils.hash_password(password)
     if utils.validate_token(token):
         user = await db_get_user_profile(username)
