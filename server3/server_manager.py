@@ -15,13 +15,14 @@ HOST = config["HOST"]
 PORT = config["PORT"]
 client_capacity = config["user_capacity"] #to not connect more users than you can handle
 func_keys = config["function_keys"]
+async_function_keys = config["async_function_keys"]
 recieve_timeout = 9 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
 standby_time = 60*5 #time you allow someone to be trying to login
 timeout = 30 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
 
 #all functrions created must have an id passed
 
-def set_client(userdata): #only used when a client joins! profile contains server data important to run clients
+async def set_client(userdata): #only used when a client joins! profile contains server data important to run clients
     try: 
         username = userdata["username"]
         sock = userdata["socket"]
@@ -34,7 +35,7 @@ def set_client(userdata): #only used when a client joins! profile contains serve
         user = get_user(username)
         if not user: #prevents same user being connected from 2 sessions
             payload = utils.validate_token(token) 
-            userfile = db_get_user_profile(username) #gets user profile from database
+            userfile = await db_get_user_profile(username) #gets user profile from database
             if payload and users_file: 
                 """user profile manages a clients session data to keep it alive and info the server needs of the client, must not be sent to client"""
                 session_key = payload["session_key"] #session key lets you access the users session profile, socket and username
@@ -109,7 +110,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
         """Server responses must be a dictionary: {"data": [content, tag]}"""
         if function in func_keys:  #checks if action requested exist as something the client can call for
             try:
-                if function == "message_user" or function == "message_group": #functions with unique cases needs its own call
+                if function in async_function_keys: #functions with unique cases needs its own call
                     response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
                 elif token: #function requires authentication
                     response = str(globals()[func_keys[function]](msg, token)) 
@@ -191,13 +192,13 @@ async def login(websocket, loop):
 
     return False
 
-def create_user(user_data): #userdata must be sent from the client as a dictionary with username and password
+async def create_user(user_data): #userdata must be sent from the client as a dictionary with username and password
     username = user_data["username"]
     password = user_data["password"]
     token = user_data["token"]
     hashed_password = utils.hash_password(password)
     if utils.validate_token(token):
-        user = db_get_user_profile(username)
+        user = await db_get_user_profile(username)
         if not user: #checks if user is registered, if not registered create user
             """User data that has to be included when created, dont remove any of it but you can add"""
             profile = {}

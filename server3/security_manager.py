@@ -2,7 +2,7 @@ from loads import *
 from database_manager import *
 import server_utils as utils
 
-def verify_user(user_data):
+async def verify_user(user_data):
     try:
         username = user_data["username"]
         password = user_data["password"]
@@ -13,7 +13,7 @@ def verify_user(user_data):
         return 0
     
     try:
-        userfile = db_get_user_profile(username)
+        userfile = await db_get_user_profile(username)
         if userfile:
             profile = utils.get_user_profile(token)
             if not profile:
@@ -26,12 +26,12 @@ def verify_user(user_data):
         print(f"Error retrieving user profile: {e}")
     return 0
 
-def get_permission_level(msg, token):
+async def get_permission_level(msg, token):
     user = utils.get_user_profile(token)
     if user["id"]:
         try:
             username = user["name"]
-            userfile = db_get_user_profile(username)
+            userfile = await db_get_user_profile(username)
             permission_level = userfile["permission_level"]
             return permission_level
         except Exception as e:
@@ -39,20 +39,20 @@ def get_permission_level(msg, token):
     
     return "Unverfied token"
 
-def change_persmission_level(data, token):
+async def change_persmission_level(data, token):
     try: #checks if data is given in the right way
         target_user = data[0]
         new_access_level = data[1]
     except:
         return "Invalid data"
-    target_userfile = db_get_user_profile(target_user) #gets target user profile
+    target_userfile = await db_get_user_profile(target_user) #gets target user profile
     if not target_userfile:
         return "Target user does not exist"
 
     profile = utils.get_user_profile(token) #gets session profile from token
     if profile: 
         username = profile["name"]
-        userfile = db_get_user_profile(username) #gets user profile 
+        userfile = await db_get_user_profile(username) #gets user profile 
         if userfile: #double checks if user has a server profile
             access_level = userfile["permission_level"] 
             if not "change_to_"+new_access_level in config["access_level"]:
