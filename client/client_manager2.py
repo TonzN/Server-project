@@ -147,7 +147,7 @@ def full_pull_queue(_queue, timeout=0.1):
 
 async def new_user_protocol(client_sock, user, password, token):    
     print("started registering")
-    message = gen_message("create_user", {"username": user, "password": password, "token": token}, "join_protocol")
+    message = gen_message("create_user", {"username": user, "password": password}, "join_protocol", token=token)
     await send_to_server(client_sock, message)
     response = None
     try:
@@ -162,13 +162,12 @@ async def new_user_protocol(client_sock, user, password, token):
         return False
     except Exception as e:
         print(f"{e}")
-        return False
-      
+        return False   
 
     if response:
         if response == "1":
-            message = {"user": user, "socket": str(client_sock), "token": token}
-            msg = gen_message("set_user", message , "join_protocol")
+            message = {"username": user, "socket": str(client_sock), "password": password}
+            msg = gen_message("set_user", message , "join_protocol", token=token)
             await send_to_server(client_sock, msg)
             success = None
             try:   
@@ -225,7 +224,7 @@ def add_to_response_log(response):
 
 async def client_joined(client_sock, user, password, token):
     print("started client joining")
-    message = gen_message("veus", {"username": user, "password": password, "token": token}, "join_protocol")
+    message = gen_message("veus", {"username": user, "password": password}, "join_protocol", token=token)
     await send_to_server(client_sock, message)
     response = None
     try:
@@ -239,13 +238,13 @@ async def client_joined(client_sock, user, password, token):
         print("empty queue")
         return False
     except Exception as e:
-        print(f"{e}")
+        print(f"{e}")       
         return False
     
     if response:    
         if response == "1":
-            message = {"user": user, "socket": str(client_sock), "token": token}
-            msg = gen_message("set_user", message , "join_protocol")
+            message = {"username": user, "socket": str(client_sock), "password": password}
+            msg = gen_message("set_user", message , "join_protocol", token=token)
             await send_to_server(client_sock, msg)
             try:   
                 if await receive_from_server(client_sock, supress=True):
@@ -259,7 +258,7 @@ async def client_joined(client_sock, user, password, token):
             except Exception as e:
                 return False  
    
-            if success != "False" :
+            if success == "True" :
                 print(f"Welcome back {user}")
                 config["username"] = user
                 config["successfull_login"] = True
@@ -272,7 +271,7 @@ async def client_joined(client_sock, user, password, token):
             print("\n Client is already logged in, please logout before attempting to login with another user.")
             return 2
         else:
-            print("\nIncorrect username or password\n")
+            print(f"\nIncorrect username or password\n or server error: {response}")
             return False
 
     else:
@@ -311,7 +310,7 @@ async def run_init(client_sock, login_signal):
     return token
 
 async def run_login(client_sock, stop_event, token):
-    while not stop_event.is_set() and not receieve_events["set_login_info"].is_set() and receieve_events["set_register_info"].is_set():
+    while not stop_event.is_set() and not receieve_events["set_login_info"].is_set() and not receieve_events["set_register_info"].is_set():
         time.sleep(0.3)
     
     user = cross_comminication_queues["username"].get()
@@ -324,8 +323,9 @@ async def run_login(client_sock, stop_event, token):
     if not joined:
         if config["login_attempts"] < 3:
             config["login_attempts"] += 1
-            await run_login(client_sock, stop_event, token)
             receieve_events["set_login_info"].clear()
+            receieve_events["set_register_info"].clear()
+            await run_login(client_sock, stop_event, token)
         else:
             print("Used up all login attempts")
 
@@ -395,7 +395,7 @@ async def run_client_mainloop(client_sock, stop_event):
     """
     HEARTBEAT_TIME = time.time()
     while not stop_event.is_set():
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.05)
         if time.time() - HEARTBEAT_TIME >= HEARTBEAT_INTERVAL:
             HEARTBEAT_TIME = time.time()
             heartbeat_attempt = await heartbeat(client_sock)
