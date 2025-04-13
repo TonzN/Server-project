@@ -13,7 +13,7 @@ def verify_user(user_data):
         return 0
     
     try:
-        userfile = get_user_json_profile(username)
+        userfile = db_get_user_profile(username)
         if userfile:
             profile = utils.get_user_profile(token)
             if not profile:
@@ -31,7 +31,7 @@ def get_permission_level(msg, token):
     if user["id"]:
         try:
             username = user["name"]
-            userfile = get_user_json_profile(username)
+            userfile = db_get_user_profile(username)
             permission_level = userfile["permission_level"]
             return permission_level
         except Exception as e:
@@ -45,14 +45,14 @@ def change_persmission_level(data, token):
         new_access_level = data[1]
     except:
         return "Invalid data"
-    target_userfile = get_user_json_profile(target_user) #gets target user profile
+    target_userfile = db_get_user_profile(target_user) #gets target user profile
     if not target_userfile:
         return "Target user does not exist"
 
     profile = utils.get_user_profile(token) #gets session profile from token
     if profile: 
         username = profile["name"]
-        userfile = get_user_json_profile(username) #gets user profile 
+        userfile = db_get_user_profile(username) #gets user profile 
         if userfile: #double checks if user has a server profile
             access_level = userfile["permission_level"] 
             if not "change_to_"+new_access_level in config["access_level"]:

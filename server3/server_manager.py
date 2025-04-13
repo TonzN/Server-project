@@ -34,12 +34,12 @@ def set_client(userdata): #only used when a client joins! profile contains serve
         user = get_user(username)
         if not user: #prevents same user being connected from 2 sessions
             payload = utils.validate_token(token) 
-            userfile = get_user_json_profile(username)
+            userfile = db_get_user_profile(username) #gets user profile from database
             if payload and users_file: 
                 """user profile manages a clients session data to keep it alive and info the server needs of the client, must not be sent to client"""
                 session_key = payload["session_key"] #session key lets you access the users session profile, socket and username
                 profile = {}
-                profile["name"] = username 
+                profile["name"] = userfile["username"] 
                 profile["id"] = userfile["id"]
                 profile["connection_error_count"] = 0
                 profile["heartbeat"] = time.time()
@@ -197,24 +197,18 @@ def create_user(user_data): #userdata must be sent from the client as a dictiona
     token = user_data["token"]
     hashed_password = utils.hash_password(password)
     if utils.validate_token(token):
-        user = get_user_json_profile(username)
+        user = db_get_user_profile(username)
         if not user: #checks if user is registered, if not registered create user
             """User data that has to be included when created, dont remove any of it but you can add"""
-            profile = {} 
+            profile = {}
             profile["username"] = username 
             profile["password"] = hashed_password
             profile["id"] = utils.gen_user_id()
             profile["permission_level"] = "basic"
-            profile["chat_history"] = {"global":[]}
-            profile["friends"] = {}
-            profile["groups"] = {}
-            profile["blacklist"] = {}
             profile["securitymode"] = "normal"
-            profile["friend_requests"] = {}
-            profile["preferences"] = {}
-            add_user_json_profile(username, profile)
+            ordered_profile = json_to_arr_ordered(profile, ("username", "password", "id", "permission_level", "securitymode"))
+            db_add_user_profile(ordered_profile) #adds user to database
             update_users_count() #this updates user count to make sure next generated id is unique
-            update_users_json_file()
             return 1
         else:
             print("User already exists")
