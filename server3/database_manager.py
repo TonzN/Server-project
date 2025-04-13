@@ -174,7 +174,8 @@ async def db_get_user_profile(conn, username):
             for r in rows:
                 print(r)
 
-        return  await conn.fetch("SELECT * FROM users WHERE username = $1", username)
+        user = await conn.fetch("SELECT * FROM users WHERE username = $1", username)
+        return  dict(user[0])
     except Exception as e:
         print(f"db_get_user_profile->Error: {e}")
         return None
