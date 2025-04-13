@@ -13,6 +13,7 @@ from group_manager import *
 
 HOST = config["HOST"]
 PORT = config["PORT"]
+print_incoming_requests = False
 client_capacity = config["user_capacity"] #to not connect more users than you can handle
 func_keys = config["function_keys"]
 async_function_keys = config["async_function_keys"]
@@ -104,14 +105,15 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
             token = data["token"]
          #   print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
         except Exception as e:
-            print(f"Could not get function and msg: {e}")
+            print(f"CRH->Could not get function and msg: {e}")
             return
 
         """Server responses must be a dictionary: {"data": [content, tag]}"""
         if function in func_keys:  #checks if action requested exist as something the client can call for
             try:
-                print(f"Function: {function} \n Data: {msg} \n Token: {token} \n Tag: {tag}")
-                print(f"function_keys: {function in func_keys} \n async_function_keys: {function in async_function_keys} \n message_function_keys: {function in message_function_keys}\n")
+                if function != "ping" and function != "show_online_users" and print_incoming_requests:
+                    print(f"Function: {function} \n Data: {msg} \n Token: {token} \n Tag: {tag}")
+                    print(f"function_keys: {function in func_keys} \n async_function_keys: {function in async_function_keys} \n message_function_keys: {function in message_function_keys}\n")
                 if function in message_function_keys: #functions with unique cases needs its own call
                     response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
                 elif function in async_function_keys and token: #functions that are async and need to be awaited
@@ -122,7 +124,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
                     response = str("WARNING: Missing token, please login again")
 
             except Exception as e: #sends back error message, this error means something wrong happened while running given function
-                print(f"Function is not a valid server request: {e}\n Error at: {function}")
+                print(f"CRH->Function is not a valid server request: {e}\n Error at: {function}")
                 response = json.dumps({"data": ["Attempted running function and failed.\n Check if the input passed is right", tag]}) + "\n"
                 await websocket.send(response.encode())
                 return False
@@ -146,7 +148,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
             return function #returns function name back incase its needed
         
     except websockets.exceptions.ConnectionClosed:
-        print("websocket.excpection lost connection")
+        print("crh->websocket.excpection lost connection")
         return "Client closed"
 
     except asyncio.TimeoutError:
@@ -154,7 +156,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
         return "lost client"
     
     except Exception as e:
-        print(f"could not recieve or send back to client {e}")
+        print(f"crh->could not recieve or send back to client {e}")
         return "Lost client"
 
 async def send_to_user(websocket, loop, message, tag, timeout):
