@@ -2,7 +2,7 @@ from loads import *
 from database_manager import *
 import server_utils as utils
 
-async def verify_user(user_data):
+async def verify_user(user_data, ignore=None):
     try:
         username = user_data["username"]
         password = user_data["password"]

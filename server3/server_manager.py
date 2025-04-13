@@ -16,6 +16,7 @@ PORT = config["PORT"]
 client_capacity = config["user_capacity"] #to not connect more users than you can handle
 func_keys = config["function_keys"]
 async_function_keys = config["async_function_keys"]
+message_function_keys = config["message_function_keys"]
 recieve_timeout = 9 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
 standby_time = 60*5 #time you allow someone to be trying to login
 timeout = 30 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
@@ -110,12 +111,15 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
         """Server responses must be a dictionary: {"data": [content, tag]}"""
         if function in func_keys:  #checks if action requested exist as something the client can call for
             try:
-                if function in async_function_keys: #functions with unique cases needs its own call
+                if function in message_function_keys: #functions with unique cases needs its own call
                     response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
-                elif token: #function requires authentication
+                elif function in async_function_keys and token: #functions that are async and need to be awaited
+                    response = str(await globals()[func_keys[function]](msg, token))
+                elif token: 
                     response = str(globals()[func_keys[function]](msg, token)) 
-                else: #function with no authentication
-                    response = str(globals()[func_keys[function]](msg)) 
+                
+                if not token:
+                    response = str("WARNING: Missing token, please login again")
 
             except Exception as e: #sends back error message, this error means something wrong happened while running given function
                 print(f"Function is not a valid server request: {e}\n Error at: {function}")

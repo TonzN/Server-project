@@ -30,6 +30,10 @@
         "message_user": "message_user",
         "message_group": "message_group"
     },
+    "message_function_keys": {
+        "message_user": "message_user",
+        "message_group": "message_group"
+    },
     "access_level": {
         "change_to_admin": [
             "admin"
