@@ -16,8 +16,8 @@ def kill_server(msg, token):
             print(msg)
             os._exit(0)
         else:
-            return "Not high enough access level"
-    return "Unverfied token"
+            return "kill_server->Not high enough access level"
+    return "kill_server->Unverfied token"
 
 def show_online_users(msg, token):
     payload = get_user_profile(token)
@@ -29,7 +29,7 @@ def show_online_users(msg, token):
             users["data"].append(user)
         return {"data": users, "signal": signal}
     else:
-        return "invalid token"
+        return "show_online_users->invalid token"
     
 def update_users_count(amount = 1):
     config["user_count"] += amount
