@@ -174,6 +174,17 @@ async def db_create_table(conn, table_name, column_defs):
     await conn.execute(create_table_query)
 
 @with_db_connection
+async def db_get_table(conn, table_name):
+    """Get table from database. Connected by the pool manager\n
+       conn: automatically handled by the pool manager"""
+    try:
+        rows = await conn.fetch(f"SELECT * FROM {table_name}")
+        return dict(rows[0])
+    except Exception as e:
+        print(f"db_get_table->Error: {e}")
+        return None
+
+@with_db_connection
 async def db_get_user_profile(conn, username):
     """Get user profile from database. Connected by the pool manager"""
     try:
