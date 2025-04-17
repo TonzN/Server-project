@@ -24,7 +24,7 @@ async def add_messanges_table():
         "message_id": "INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
         "encrypted": "BOOLEAN DEFAULT FALSE",
     }
-    await database_manager.db.create_table("messages", column_defs)
+    await database_manager.db_create_table("messages", column_defs)
 
 
 if update_db:
