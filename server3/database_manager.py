@@ -160,6 +160,20 @@ def update_users_json_file(): #depricated
  #   raise RuntimeError("Database_manager->waitfor(main_pool)-> Could not get main pool")
 
 @with_db_connection
+async def db_create_table(conn, table_name, column_defs):
+    """
+    Create a table in the database if it doesn't exist.
+    
+    Args:
+        conn: The database connection object.
+        table_name: The name of the table to create.
+        columns_defs: A dictionary, column name as key and column definition as value.
+    """
+    column_definitions = ", ".join(f"{col} {col_type}" for col, col_type in column_defs.items())
+    create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({column_definitions})"
+    await conn.execute(create_table_query)
+
+@with_db_connection
 async def db_get_user_profile(conn, username):
     """Get user profile from database. Connected by the pool manager"""
     try:
@@ -287,4 +301,4 @@ async def db_get_value_from_user(conn, value, username):
     except Exception as e:
         print(f"db_get_value_from_user->Error: {e}")
         return None
-    
+

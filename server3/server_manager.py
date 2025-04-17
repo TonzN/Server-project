@@ -138,13 +138,9 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
             response = json.dumps({"data": [response, tag]}) + "\n"
             await websocket.send(response.encode())
             #for login sequence
-            if function == "veus":
+            if function == "veus" or function == "set_user" or function == "create_user":
                 return [function, msg]
-            if function == "set_user":
-                return [function, msg]
-            if function == "create_user":
-                return [function, msg]
-            
+         
             return function #returns function name back incase its needed
         
     except websockets.exceptions.ConnectionClosed:
@@ -315,8 +311,11 @@ async def main():
         print("Could not connect to database, closing server")
         return
     print("Connected to database")
-    print("\n checking users table\n")
+    print("\n checking users table...\n")
+    print("Found example usertable:")
     print(await db_get_user_profile("Toni"))
+    print("\n Checking messanges table...\n")
+    print("Found example messagetable:")
     print("\nStarting server...")
     await run_server()
 
