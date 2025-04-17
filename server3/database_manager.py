@@ -179,7 +179,19 @@ async def db_get_table(conn, table_name):
        conn: automatically handled by the pool manager"""
     try:
         rows = await conn.fetch(f"SELECT * FROM {table_name}")
-        return dict(rows[0])
+        if len(rows) == 0: #for debugging incase the table is actually empty
+            print("Table is empty, users template")
+            show = await conn.fetch("""
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_name = 'users'
+            """)
+            for r in show:
+                print(r)
+            return None
+        else:
+            return dict(rows[0])
+        
     except Exception as e:
         print(f"db_get_table->Error: {e}")
         return None
