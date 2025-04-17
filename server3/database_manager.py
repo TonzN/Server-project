@@ -180,11 +180,11 @@ async def db_get_table(conn, table_name):
     try:
         rows = await conn.fetch(f"SELECT * FROM {table_name}")
         if len(rows) == 0: #for debugging incase the table is actually empty
-            print("Table is empty, users template")
+            print("Table is empty, messages template")
             show = await conn.fetch("""
                 SELECT column_name, data_type
                 FROM information_schema.columns
-                WHERE table_name = 'users'
+                WHERE table_name = 'messages'
             """)
             for r in show:
                 print(r)
