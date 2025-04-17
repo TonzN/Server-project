@@ -5,7 +5,7 @@ import asyncio
 
 loads.time.sleep(1)
 
-update_db = False
+update_db = True
 
 async def update_users():
     users = [database_manager.get_user_json_profile(user) for user in database_manager.get_all_users_json_profile()]
