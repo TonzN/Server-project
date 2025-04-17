@@ -15,7 +15,7 @@ async def update_users():
     await database_manager.db_add_multiple_user_profile(ordered_users)
 
 async def add_messanges_table():
-    print("\n\Creating messages table...\n")
+    print("\nCreating messages table...\n")
     column_defs = {
         "sender": "VARCHAR(200)",
         "receiver": "VARCHAR(200)",
