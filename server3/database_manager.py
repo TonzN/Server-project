@@ -11,20 +11,21 @@ _groups = {"global": group_manager.GroupChat("global")}
 server_pool = PoolManager()
 """pool for the main server, this is used to manage the connections to the database, "
 "if you have multiple servers you can add more pools here"""
-def with_db_connection():
-    def _with_db_connection(func):
-        """Decorator to manage database connections.  """
-        async def wrapper(*args, **kwargs):
-            _db_pool = server_pool.get_pool("main_pool") #get the pool
-            if _db_pool is None:
-                raise RuntimeError("DB pool not initialized")
-            try:
-                async with _db_pool.acquire() as conn:
-                    return await func(conn, *args, **kwargs)
-            except Exception as e:
-                print(f"with_db_connection->Error in database operation: {e}")
-        return wrapper
-    return _with_db_connection
+
+
+def with_db_connection(func):
+    """Decorator to manage database connections.  """
+    async def wrapper(*args, **kwargs):
+        _db_pool = server_pool.get_pool("main_pool") #get the pool
+        if _db_pool is None:
+            raise RuntimeError("DB pool not initialized")
+        try:
+            async with _db_pool.acquire() as conn:
+                return await func(conn, *args, **kwargs)
+        except Exception as e:
+            print(f"with_db_connection->Error in database operation: {e}")
+    return wrapper
+
 
 #--------------------------------------#
 def wait_for(function, max_wait=5, *args, **kwargs):
@@ -158,7 +159,44 @@ def update_users_json_file(): #depricated
 #if not main_pool:
  #   raise RuntimeError("Database_manager->waitfor(main_pool)-> Could not get main pool")
 
-@with_db_connection()
+@with_db_connection
+async def db_create_table(conn, table_name, column_defs):
+    """
+    Create a table in the database if it doesn't exist.
+    
+    Args:
+        conn: The database connection object.
+        table_name: The name of the table to create.
+        columns_defs: A dictionary, column name as key and column definition as value.
+    """
+    column_definitions = ", ".join(f"{col} {col_type}" for col, col_type in column_defs.items())
+    create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({column_definitions})"
+    await conn.execute(create_table_query)
+
+@with_db_connection
+async def db_get_table(conn, table_name):
+    """Get table from database. Connected by the pool manager\n
+       conn: automatically handled by the pool manager"""
+    try:
+        rows = await conn.fetch(f"SELECT * FROM {table_name}")
+        if len(rows) == 0: #for debugging incase the table is actually empty
+            print("Table is empty, messages template")
+            show = await conn.fetch("""
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_name = 'messages'
+            """)
+            for r in show:
+                print(r)
+            return None
+        else:
+            return dict(rows[0])
+        
+    except Exception as e:
+        print(f"db_get_table->Error: {e}")
+        return None
+
+@with_db_connection
 async def db_get_user_profile(conn, username):
     """Get user profile from database. Connected by the pool manager"""
     try:
@@ -173,12 +211,44 @@ async def db_get_user_profile(conn, username):
             for r in rows:
                 print(r)
 
-        return  await conn.fetch("SELECT * FROM users WHERE username = $1", username)  
+        user = await conn.fetch("SELECT * FROM users WHERE username = $1", username)
+        return  dict(user[0])
     except Exception as e:
         print(f"db_get_user_profile->Error: {e}")
         return None
 
-@with_db_connection()
+@with_db_connection
+async def db_update_user_profile(conn, user_data):
+    """Update user profile in database. Connected by the pool manager\n
+       user_data = array or list of user data\n
+       conn: automatically handled by the pool manager\n
+       This is used for bulk updates"""
+    try:
+        if user_data:
+            return await conn.execute("UPDATE users "
+            "SET username = $1, password = $2, id = $3, permission_level = $4, security_mode = $5 "
+            "WHERE username = $6", *user_data, user_data[0])
+        else:
+            print("No user data to update")
+            return False
+    except Exception as e:
+        print(f"db_update_user_profile->Error: {e}")
+        return None
+
+@with_db_connection
+async def db_add_user_data(conn, username, value, data):
+    """Add user data to database. Connected by the pool manager\n
+       username = username of the user to add data to\n
+       value = key to add data to\n
+       data = data to add\n
+       conn: automatically handled by the pool manager"""
+    try:
+        return await conn.execute("UPDATE users SET $1 = $2 WHERE username = $3", value, data, username)
+    except Exception as e:
+        print(f"db_add_user_data->Error: {e} \n username: {username}, value: {value}, data: {data}")
+        return None
+    
+@with_db_connection
 async def db_add_user_profile(conn, user_data):
     """Add user profile to database. Connected by the pool manager.\n
        user_data = array or list of user data\n
@@ -192,7 +262,7 @@ async def db_add_user_profile(conn, user_data):
         print(f"db_add_user_profile->Error: {e}")
         return None
 
-@with_db_connection()
+@with_db_connection
 async def db_add_multiple_user_profile(conn, user_data):
     """
        Add user profile to database. Connected by the pool manager\n 
@@ -207,3 +277,51 @@ async def db_add_multiple_user_profile(conn, user_data):
     except Exception as e:
         print(f"db_add_multiple_user_profile->Error: {e}")
         return None
+
+@with_db_connection
+async def db_update_user_profile(conn, user_data):
+    """Update user profile in database. Connected by the pool manager\n
+       user_data = array or list of user data\n
+       conn: automatically handled by the pool manager\n
+       This is used for bulk updates"""
+    try:
+        return await conn.executemany("UPDATE users "
+        "(username, password, id, permission_level, security_mode) "
+        "VALUES ($1, $2, $3, $4, $5) WHERE username = $username", user_data, user_data[0])
+    
+    except Exception as e:
+        print(f"db_update_user_profile->Error: {e}")
+        return None
+
+@with_db_connection
+async def db_delete_user_profile(conn, username):
+    """Delete user profile from database. Connected by the pool manager\n
+       username = username of the user to delete\n
+       conn: automatically handled by the pool manager"""
+    try:
+        return await conn.execute("DELETE FROM users WHERE username = $1", username)
+    except Exception as e:
+        print(f"db_delete_user_profile->Error: {e}")
+        return None
+
+@with_db_connection
+async def db_get_all_user_profile(conn):
+    """Get all user profiles from database. Connected by the pool manager\n
+       conn: automatically handled by the pool manager"""
+    try:
+        return await conn.fetch("SELECT * FROM users")
+    except Exception as e:
+        print(f"db_get_all_user_profile->Error: {e}")
+        return None
+
+@with_db_connection
+async def db_get_value_from_user(conn, value, username):
+    """Get value from user profile in database. Connected by the pool manager\n
+       key = key to get from the user profile\n
+       conn: automatically handled by the pool manager"""
+    try:
+        return await conn.fetch("SELECT $1 FROM users WHERE username = $2", value, username)
+    except Exception as e:
+        print(f"db_get_value_from_user->Error: {e}")
+        return None
+

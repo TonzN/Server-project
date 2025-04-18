@@ -2,18 +2,18 @@ from loads import *
 from database_manager import *
 import server_utils as utils
 
-def verify_user(user_data):
+async def verify_user(user_data, token):
     try:
         username = user_data["username"]
         password = user_data["password"]
-        token = user_data["token"]
+        token = token
 
     except Exception as e:
-        print(f"invalid data provided {e}")
+        print(f"verify_user->invalid data provided {e}")
         return 0
     
     try:
-        userfile = get_user_json_profile(username)
+        userfile = await db_get_user_profile(username)
         if userfile:
             profile = utils.get_user_profile(token)
             if not profile:
@@ -21,38 +21,38 @@ def verify_user(user_data):
                     return 1
                 else:
                     return 0
-            return 2
+            return 2 # token already in use/user already logged in
     except Exception as e:
-        print(f"Error retrieving user profile: {e}")
+        print(f"verify_user->Error retrieving user profile: {e}")
     return 0
 
-def get_permission_level(msg, token):
+async def get_permission_level(msg, token):
     user = utils.get_user_profile(token)
     if user["id"]:
         try:
             username = user["name"]
-            userfile = get_user_json_profile(username)
+            userfile = await db_get_user_profile(username)
             permission_level = userfile["permission_level"]
             return permission_level
         except Exception as e:
-            return f"Error retrieving permission level {e}"
+            return f"get_permission_level->Error retrieving permission level {e}"
     
-    return "Unverfied token"
+    return "change_permission_level->Unverfied token"
 
-def change_persmission_level(data, token):
+async def change_persmission_level(data, token):
     try: #checks if data is given in the right way
         target_user = data[0]
         new_access_level = data[1]
     except:
-        return "Invalid data"
-    target_userfile = get_user_json_profile(target_user) #gets target user profile
+        return "change_permission_level->Invalid data"
+    target_userfile = await db_get_user_profile(target_user) #gets target user profile
     if not target_userfile:
-        return "Target user does not exist"
+        return "change_permission_level->Target user does not exist"
 
     profile = utils.get_user_profile(token) #gets session profile from token
     if profile: 
         username = profile["name"]
-        userfile = get_user_json_profile(username) #gets user profile 
+        userfile = await db_get_user_profile(username) #gets user profile 
         if userfile: #double checks if user has a server profile
             access_level = userfile["permission_level"] 
             if not "change_to_"+new_access_level in config["access_level"]:
@@ -64,6 +64,6 @@ def change_persmission_level(data, token):
             else:
                 return "Not high enough access level to do this"
         else:
-            return "Userprofile is missing"
+            return "change_permission_level->Userprofile is missing"
     else:
-        return "Invalid token"
+        return "change_permission_level->Invalid token"

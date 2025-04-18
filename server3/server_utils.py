@@ -101,5 +101,8 @@ def json_to_arr_ordered(json_data, field_order):
         print(f"Error: json_to_arr_ordered: {field_order}, {json_data}, Exception: {e}")
         return False
 
-
+def db_to_json(db_data):
+    """Convert db data back to json format
+       db_data: dict or list of dicts"""
+    pass
 

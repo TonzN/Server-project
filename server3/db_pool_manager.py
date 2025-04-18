@@ -19,7 +19,7 @@ class PoolManager:
         if name in self._pools:
             return self._pools[name]
         elif ignore == False:
-            raise RuntimeError("Pool not found")
+            raise RuntimeError("PoolManager->get_pool->Pool not found")
         else:
             return None
         

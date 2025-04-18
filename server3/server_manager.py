@@ -13,33 +13,35 @@ from group_manager import *
 
 HOST = config["HOST"]
 PORT = config["PORT"]
+print_incoming_requests = False
 client_capacity = config["user_capacity"] #to not connect more users than you can handle
 func_keys = config["function_keys"]
+async_function_keys = config["async_function_keys"]
+message_function_keys = config["message_function_keys"]
 recieve_timeout = 9 #timeout time for sending or recieving, gives time for users with high latency but also to not yield for too long
 standby_time = 60*5 #time you allow someone to be trying to login
 timeout = 30 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
 
 #all functrions created must have an id passed
 
-def set_client(userdata): #only used when a client joins! profile contains server data important to run clients
+async def set_client(userdata, token): #only used when a client joins! profile contains server data important to run clients
     try: 
         username = userdata["username"]
         sock = userdata["socket"]
-        token = userdata["token"]
     except Exception as e:
         print(f"invalid userdata {e}")
         return False
     
-    if verify_user(userdata) == 1:
+    if await verify_user(userdata, token) == 1:
         user = get_user(username)
         if not user: #prevents same user being connected from 2 sessions
             payload = utils.validate_token(token) 
-            userfile = get_user_json_profile(username)
+            userfile = await db_get_user_profile(username) #gets user profile from database
             if payload and users_file: 
                 """user profile manages a clients session data to keep it alive and info the server needs of the client, must not be sent to client"""
                 session_key = payload["session_key"] #session key lets you access the users session profile, socket and username
                 profile = {}
-                profile["name"] = username 
+                profile["name"] = userfile["username"] 
                 profile["id"] = userfile["id"]
                 profile["connection_error_count"] = 0
                 profile["heartbeat"] = time.time()
@@ -103,21 +105,26 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
             token = data["token"]
          #   print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
         except Exception as e:
-            print(f"Could not get function and msg: {e}")
+            print(f"CRH->Could not get function and msg: {e}")
             return
 
         """Server responses must be a dictionary: {"data": [content, tag]}"""
         if function in func_keys:  #checks if action requested exist as something the client can call for
             try:
-                if function == "message_user" or function == "message_group": #functions with unique cases needs its own call
+                if function != "ping" and function != "show_online_users" and print_incoming_requests:
+                    print(f"Function: {function} \n Data: {msg} \n Token: {token} \n Tag: {tag}")
+                    print(f"function_keys: {function in func_keys} \n async_function_keys: {function in async_function_keys} \n message_function_keys: {function in message_function_keys}\n")
+                if function in message_function_keys: #functions with unique cases needs its own call
                     response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
-                elif token: #function requires authentication
+                elif function in async_function_keys and token: #functions that are async and need to be awaited
+                    response = str(await globals()[func_keys[function]](msg, token))
+                elif token: 
                     response = str(globals()[func_keys[function]](msg, token)) 
-                else: #function with no authentication
-                    response = str(globals()[func_keys[function]](msg)) 
+                elif not token:
+                    response = str("WARNING: Missing token, please login again")
 
             except Exception as e: #sends back error message, this error means something wrong happened while running given function
-                print(f"Function is not a valid server request: {e}\n Error at: {function}")
+                print(f"CRH->Function is not a valid server request: {e}\n Error at: {function}")
                 response = json.dumps({"data": ["Attempted running function and failed.\n Check if the input passed is right", tag]}) + "\n"
                 await websocket.send(response.encode())
                 return False
@@ -131,17 +138,13 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
             response = json.dumps({"data": [response, tag]}) + "\n"
             await websocket.send(response.encode())
             #for login sequence
-            if function == "veus":
+            if function == "veus" or function == "set_user" or function == "create_user":
                 return [function, msg]
-            if function == "set_user":
-                return [function, msg]
-            if function == "create_user":
-                return [function, msg]
-            
+         
             return function #returns function name back incase its needed
         
     except websockets.exceptions.ConnectionClosed:
-        print("websocket.excpection lost connection")
+        print("crh->websocket.excpection lost connection")
         return "Client closed"
 
     except asyncio.TimeoutError:
@@ -149,7 +152,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
         return "lost client"
     
     except Exception as e:
-        print(f"could not recieve or send back to client {e}")
+        print(f"crh->could not recieve or send back to client {e}")
         return "Lost client"
 
 async def send_to_user(websocket, loop, message, tag, timeout):
@@ -186,35 +189,28 @@ async def login(websocket, loop):
                     print("Login succesfull")
                     return True 
             except Exception as e:
-                print("Error: did not set client")
+                print("login->Error: did not set client")
         print("USER NOT VERIFIED\n")
 
     return False
 
-def create_user(user_data): #userdata must be sent from the client as a dictionary with username and password
+async def create_user(user_data, token): #userdata must be sent from the client as a dictionary with username and password
     username = user_data["username"]
     password = user_data["password"]
-    token = user_data["token"]
     hashed_password = utils.hash_password(password)
     if utils.validate_token(token):
-        user = get_user_json_profile(username)
+        user = await db_get_user_profile(username)
         if not user: #checks if user is registered, if not registered create user
             """User data that has to be included when created, dont remove any of it but you can add"""
-            profile = {} 
+            profile = {}
             profile["username"] = username 
             profile["password"] = hashed_password
             profile["id"] = utils.gen_user_id()
             profile["permission_level"] = "basic"
-            profile["chat_history"] = {"global":[]}
-            profile["friends"] = {}
-            profile["groups"] = {}
-            profile["blacklist"] = {}
             profile["securitymode"] = "normal"
-            profile["friend_requests"] = {}
-            profile["preferences"] = {}
-            add_user_json_profile(username, profile)
+            ordered_profile = json_to_arr_ordered(profile, ("username", "password", "id", "permission_level", "securitymode"))
+            db_add_user_profile(ordered_profile) #adds user to database
             update_users_count() #this updates user count to make sure next generated id is unique
-            update_users_json_file()
             return 1
         else:
             print("User already exists")
@@ -315,8 +311,11 @@ async def main():
         print("Could not connect to database, closing server")
         return
     print("Connected to database")
-    print("\n checking users table\n")
+    print("\n checking users table...\n")
+    print("Found example usertable:")
     print(await db_get_user_profile("Toni"))
+    print("\n Checking messanges table...\n")
+    print(await db_get_table("messages"))
     print("\nStarting server...")
     await run_server()
 
