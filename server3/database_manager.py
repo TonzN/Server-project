@@ -358,7 +358,7 @@ async def db_get_all_messages_from(conn, username):
        username = username of the user to get messages from\n
        conn: automatically handled by the pool manager"""
     try:
-        return await conn.fetch("SELECT * FROM messages WHERE sender = $1", username)
+        return await conn.fetch("SELECT * FROM messages WHERE receiver = $1", username)
     except Exception as e:
         print(f"db_get_all_messages_from->Error: {e}")
         return None
