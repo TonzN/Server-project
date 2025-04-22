@@ -340,13 +340,13 @@ async def db_get_value_from_user(conn, value, username):
         return None
 
 @with_db_connection
-async def db_get_messages_from_user_to(conn, sender, reciever):
+async def db_get_messages_from_user_to(conn, sender, receiver):
     """Get messages from user to user in database. Connected by the pool manager\n
        sender = sender of the message\n
-       recieve = reciever of the message\n
+       receiver = receiver of the message\n
        conn: automatically handled by the pool manager"""
     try:
-        return await conn.fetch("SELECT * FROM messages WHERE sender = $1 AND reciever = $2", sender, reciever)
+        return await conn.fetch("SELECT * FROM messages WHERE sender = $1 AND receiver = $2", sender, receiver)
     except Exception as e:
         print(f"db_get_messages_from_user_to->Error: {e}")
         return "db_get_messages_from_user_to->Error: {e}"
@@ -371,7 +371,7 @@ async def db_add_message(conn, data):
        conn: automatically handled by the pool manager"""
     try:
         return await conn.execute("INSERT INTO messages "
-        "(sender, recieve, message) "
+        "(sender, receiver, message) "
         "VALUES ($1, $2, $3)", *data)
     except Exception as e:
         print(f"db_add_message->Error: {e}")
