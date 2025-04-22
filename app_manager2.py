@@ -57,7 +57,7 @@ class Client_thread(QThread):
                     await client.run_client(self.client_sock, self.login_signal, self.rec_stop, self.main_menu_signal)
 
                 except Exception as e:
-                    print(f"Error {e}")
+                    print(f"Async run->Error {e}")
 
                 finally:
                     print("closed thread socket")
@@ -123,6 +123,11 @@ class Chat(QWidget):
         self.main_layout.addWidget(self.input_field)
         self.main_layout.addWidget(self.send_button)
     
+    def clear_messages(self):
+        """Removes all messages from the layout."""
+        if self.chat_list:
+            self.chat_list.clear()
+
     def send_message_db(self):
         self.send_message_db = False
     
@@ -152,11 +157,21 @@ class Chat(QWidget):
     def add_message(self, data):
         username = data["user"]
         message = data["message"]
-        item_text = f"{username}: {message}"
-        item = QListWidgetItem(item_text)
-        self.chat_list.addItem(item)
-        self.chat_list.scrollToBottom()
+        if type(message) == str:
+            item_text = f"{username}: {message}"
+            item = QListWidgetItem(item_text)
+            self.chat_list.addItem(item)
+            self.chat_list.scrollToBottom()
 
+        elif type(message) == list:
+            for i in range(len(message)):
+                item_text = f"{message[i]["sender"]}: {message[i]["message"]}"
+                item = QListWidgetItem(item_text)
+                self.chat_list.addItem(item)
+                self.chat_list.scrollToBottom()
+
+
+  
 class DropDownMenu(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -166,6 +181,7 @@ class DropDownMenu(QWidget):
         self.online_users = {}
         self.refresh_signal = RemoteSignal()
         self.refresh_signal.signal.connect(self.refresh)
+        self.associate_chat = None
         client.signals["refresh_menu_panel"] = [self.refresh_signal.signal, dict]
         self.refresh_button = QPushButton("Refresh")
         # self.main_layout.addWidget(self.refresh_button)
@@ -181,6 +197,12 @@ class DropDownMenu(QWidget):
     def select_group(self):
         config["send_type"] = "group"
         config["selected_group"] = "global"
+        if self.associate_chat:
+            self.associate_chat.clear_messages()
+            user = "global"
+            msg = client.gen_message("pull_all_chat_history", [], "chat", config["token"])
+            client.cross_comminication_queues["main"].put_nowait(msg)
+            client.receieve_events["main"].set()
 
     def refresh(self, data):
         users = data["data"]
@@ -206,6 +228,12 @@ class DropDownMenu(QWidget):
         config["send_type"] = "user"
         config["selected_group"] == False
         config["selected_user"] = button.property("user")
+        if self.associate_chat:
+            self.associate_chat.clear_messages()
+            user = config["selected_user"] 
+            msg = client.gen_message("pull_user_chat_history_to_user", [user], "chat", config["token"])
+            client.cross_comminication_queues["main"].put_nowait(msg)
+            client.receieve_events["main"].set()
         
 class Window(QWidget):
     def __init__(self):
@@ -231,6 +259,7 @@ class Window(QWidget):
 
         self.main_chat = Chat(self)
         side_panel = DropDownMenu(self)
+        side_panel.associate_chat = self.main_chat
         container_layout.addWidget(side_panel, 1)
         container_layout.addWidget(self.main_chat, 2)
         self.main_layout.addWidget(container)

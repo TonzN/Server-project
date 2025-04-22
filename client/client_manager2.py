@@ -21,13 +21,14 @@ receieve_events = { #tag associated with where message has associated function
     "start_register": asyncio.Event(),
     "set_login_info": asyncio.Event(),
     "set_register_info": asyncio.Event(),
-    "send_message": asyncio.Event()
+    "send_message": asyncio.Event(),
 }
 
 cross_comminication_queues = {
     "password": queue.Queue(),
     "username": queue.Queue(),
     "chat_message": queue.Queue(),
+    "main": queue.Queue()
 }
 
 receieve_queue = { #tag associated with where message has associated function
@@ -101,8 +102,9 @@ async def receive_from_server(client_sock, wait_for=2, expected_tag=None, supres
         content = msg["data"][0]
         tag = msg["data"][1]
         if tag == "chat":
-            print(content)
+            print(msg)
         add_to_response_log(content)
+
 
         try:
             if tag in receieve_queue:
@@ -124,12 +126,12 @@ def full_pull_queue(_queue, timeout=0.1):
                 if type(recieved) == str:
                     try:
                         recieved = ast.literal_eval(recieved)
-                    except:
+                    except Exception as e:
+                     #   print(f"\nError at converting string to dict: {e}")
                         continue
-
                 if recieved:
                     if "signal" in recieved:
-                        if recieved["signal"] in signals:   
+                        if recieved["signal"] in signals:  
                             try:
                                 if "data" in recieved:
                                     if type(recieved["data"]) == signals[recieved["signal"]][1]: #received content package
@@ -143,7 +145,7 @@ def full_pull_queue(_queue, timeout=0.1):
             except queue.Empty:
                 break
     else:
-        print("Invalid queue")
+        print("Full_pull_queue -> Invalid queue")
 
 async def new_user_protocol(client_sock, user, password, token):    
     print("started registering")
@@ -407,7 +409,7 @@ async def run_client_mainloop(client_sock, stop_event):
             receieve_events["send_message"].clear()
             while not cross_comminication_queues["chat_message"].empty(): 
                 try:
-                    msg = cross_comminication_queues["chat_message"].get(timeout=0.5)
+                    msg = cross_comminication_queues["chat_message"].get(timeout=0.1)
                 except queue.Empty:
                     print("No chat message to send")
                     continue
@@ -419,9 +421,19 @@ async def run_client_mainloop(client_sock, stop_event):
                         signals["chat"][0].emit({"user": "you", "message": msg["data"][1], "signal": "chat"})
             #   await receive_from_server(client_sock, wait_for=0.5, supress=True)
         try:
-            await receive_from_server(client_sock, wait_for=0.5, supress=True)
+            await receive_from_server(client_sock, wait_for=0.15, supress=True)
             full_pull_queue("chat")
             if receieve_events["main"].is_set():
+                while not cross_comminication_queues["main"].empty():
+                    try:
+                        msg = cross_comminication_queues["main"].get(timeout=0.1)
+                    except queue.Empty:
+                        print("No main request to send")
+                        continue
+                    sent = await send_to_server(client_sock, msg, True)
+                    if not sent:
+                        print("Could not send mainloop request")
+
                 full_pull_queue("main")
                 receieve_events["main"].clear()
                 
