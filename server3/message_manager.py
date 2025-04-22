@@ -99,7 +99,7 @@ async def pull_user_chat_history_to_user(data, token):
                 chat_history2 = await db_get_messages_from_user_to(username, sender)
 
 
-            return {"user": username, "message": [serialize_record(record) for record in zip(chat_history, chat_history2)], "signal": "chat"}
+            return {"user": username, "message": zip([serialize_record(record) for record in chat_history], [serialize_record(record) for record in chat_history2]), "signal": "chat"}
         else:
             return "pull_user_chat_history_to_user->invalid token"
     
