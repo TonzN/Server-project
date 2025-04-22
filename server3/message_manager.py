@@ -86,8 +86,11 @@ async def pull_user_chat_history_to_user(data, token):
             if not user:
                 return f"{user} is not online"
             
-            chat_history = await db_get_messages_from_user_to(sender, username)
-            print(chat_history)
+            if data[1] == "sent":
+                chat_history = await db_get_messages_from_user_to(sender, username)
+            elif data[1] == "recieved":
+                chat_history = await db_get_messages_from_user_to(username, sender)
+                
             return chat_history
         else:
             return "pull_user_chat_history_to_user->invalid token"
