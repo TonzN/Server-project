@@ -64,10 +64,9 @@ async def pull_all_chat_history(data, token):
     try:
         profile = get_user_profile(token)
         if profile:
-            username = data[0]
             group = "global"
             chat_history = await db_get_all_messages_from(group)
-            return {"user": username, "message": [serialize_record(record) for record in chat_history], "signal": "chat"}
+            return {"user": profile["name"], "message": [serialize_record(record) for record in chat_history], "signal": "chat"}
         else:
             return "pull_all_chat_history->invalid token"
         
