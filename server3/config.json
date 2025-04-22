@@ -32,7 +32,10 @@
     },
     "message_function_keys": {
         "message_user": "message_user",
-        "message_group": "message_group"
+        "message_group": "message_group",
+        "pull_chat_history": "pull_group_chat_history",
+        "pull_user_chat_history_to_user": "pull_user_chat_history_to_user",
+        "pull_all_chat_history": "pull_all_chat_history"
     },
     "access_level": {
         "change_to_admin": [

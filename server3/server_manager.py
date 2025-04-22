@@ -115,7 +115,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
                     print(f"Function: {function} \n Data: {msg} \n Token: {token} \n Tag: {tag}")
                     print(f"function_keys: {function in func_keys} \n async_function_keys: {function in async_function_keys} \n message_function_keys: {function in message_function_keys}\n")
                 if function in message_function_keys: #functions with unique cases needs its own call
-                    response =  str(await globals()[func_keys[function]](loop, msg, tag, token)) 
+                    response =  str(await globals()[func_keys[function]](msg, token)) 
                 elif function in async_function_keys and token: #functions that are async and need to be awaited
                     response = str(await globals()[func_keys[function]](msg, token))
                 elif token: 

@@ -2,7 +2,8 @@ from loads import *
 from database_manager import *
 from server_utils import *
 
-async def message_group(loop, data, tag, token):
+#----------------requests-----------------
+async def message_group(data, token):
     try:
         profile = get_user_profile(token)
         if profile:
@@ -16,21 +17,22 @@ async def message_group(loop, data, tag, token):
                             client_socket = get_user(user)
                             response = json.dumps({"data": [{"user": "[global]"+profile["name"], "message": msg, "signal": "chat"}, "chat", ],  "signals": "chat"}) + "\n"
                             await client_socket.send(response.encode()) #to send other users messages you need their socket
+                            await logg_message(profile, user, msg)
                     return f"Sent message to {group}"
             else:
-                return "invalid group"
+                return "message_group->invalid group"
         else:
-            return "invalid token"
+            return "message_group->invalid token"
     
     except asyncio.TimeoutError:
-        print("Socket timout, could not send or recieve in time")
-        return "Did not send message"
+        print("message_group->Socket timout, could not send or recieve in time")
+        return "message_group->Did not send message"
     
     except Exception as e:
-        print(f"could not recieve or send back to group or error with provided data {e}")
-        return "Did not send message"
+        print(f"message_group->could not recieve or send back to group or error with provided data {e}")
+        return "message_group->Did not send message"
 
-async def message_user(loop, data, tag, token):
+async def message_user(data, token):
     try:
         profile = get_user_profile(token)
         if profile:
@@ -44,33 +46,66 @@ async def message_user(loop, data, tag, token):
             
             response = json.dumps({"data": [{"user": profile["name"], "message": msg, "signal": "chat"}, "chat"]}) + "\n"
             await client_socket.send(response.encode()) #to send other users messages you need their socket
-            logg_message(profile, username, msg)
+            await logg_message(profile, username, msg)
             return f"Sent message to {user}"
         else:
-            return "invalid token"
+            return "message_user->invalid token"
     
     except asyncio.TimeoutError:
         print("Socket timout, could not send or recieve in time")
-        return "Did not send message"
+        return "message_user->Did not send message"
     
     except Exception as e:
-        print(f"could not recieve or send back to client or error with provided data {e}")
-        return "Did nto send message"
+        print(f"message_user->could not recieve or send back to client or error with provided data {e}")
+        return "message_user->Did not send message"
 
+async def pull_all_chat_history(data, token):
+    try:
+        profile = get_user_profile(token)
+        if profile:
+            group = "global"
+            chat_history = await db_get_all_messages_from(group)
+            return chat_history
+        else:
+            return "pull_all_chat_history->invalid token"
+        
+    except asyncio.TimeoutError:    
+        print("Socket timout, could not send or recieve in time")
+        return "pull_all_chat_history->Did not send message"
+    except Exception as e:  
+        print(f"pull_all_chat_history->could not recieve or send back to client or error with provided data {e}")
+        return "pull_all_chat_history->Did not send message"
 
-def remove_profile(key):
-    pass
-
-def logg_message(profile, target_user, msg):
+async def pull_user_chat_history_to_user(data, token):
+    try:
+        profile = get_user_profile(token)
+        sender = profile["name"]
+        if profile:
+            username = data[0]
+            user = db_find_user_profile(username)
+            if not user:
+                return f"{user} is not online"
+            
+            chat_history = await db_get_messages_from_user_to(sender, username)
+            return chat_history
+        else:
+            return "pull_user_chat_history_to_user->invalid token"
+    
+    except asyncio.TimeoutError:
+        print("Socket timout, could not send or recieve in time")
+        return "pull_user_chat_history_to_user->Did not send message"
+    
+    except Exception as e:
+        print(f"pull_user_chat_history_to_user->could not recieve or send back to client or error with provided data {e}")
+        return "pull_user_chat_history_to_user->Did not send message"
+    
+#----------logic-------------------
+async def logg_message(profile, target_user, msg):
     try:
         if profile and target_user and msg:
-            log = {"user": profile["name"], "target": target_user, "message": msg}
+            #format: sender, receiver, message
+            log = {profile["name"], target_user, msg}
+            await db_add_message(log)
     except Exception as e:
         print(f"Could not log message {e}")
         return False
-
-def pull_chat_history(user):
-    pass
-
-def pull_group_chat_history(group):
-    pass
