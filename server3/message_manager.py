@@ -18,7 +18,7 @@ async def message_group(data, token):
                             client_socket = get_user(user)
                             response = json.dumps({"data": [{"user": "[global]"+profile["name"], "message": msg, "signal": "chat"}, "chat", ],  "signals": "chat"}) + "\n"
                             await client_socket.send(response.encode()) #to send other users messages you need their socket
-                            await group_logg_message(group, user, msg)
+                            await group_logg_message(profile, group, msg)
                     return f"Sent message to {group}"
             else:
                 return "message_group->invalid group"
@@ -122,11 +122,11 @@ async def logg_message(profile, target_user, msg):
         print(f"Could not log message {e}")
         return False
     
-async def group_logg_message(group, target_user, msg):
+async def group_logg_message(profile, group, msg):
     try:
-        if group and target_user and msg:
+        if profile and group and msg:
             #format: sender, receiver, message
-            log = [group, target_user, msg]
+            log = [profile["name"], group, msg]
             await db_add_message(log)
     except Exception as e:
         print(f"Could not log message {e}")
