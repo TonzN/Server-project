@@ -105,7 +105,7 @@ async def logg_message(profile, target_user, msg):
     try:
         if profile and target_user and msg:
             #format: sender, receiver, message
-            log = {profile["name"], target_user, msg}
+            log = [profile["name"], target_user, msg]
             await db_add_message(log)
     except Exception as e:
         print(f"Could not log message {e}")

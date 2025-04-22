@@ -13,7 +13,7 @@ from group_manager import *
 
 HOST = config["HOST"]
 PORT = config["PORT"]
-print_incoming_requests = True
+print_incoming_requests = False
 client_capacity = config["user_capacity"] #to not connect more users than you can handle
 func_keys = config["function_keys"]
 async_function_keys = config["async_function_keys"]
@@ -129,7 +129,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
                 await websocket.send(response.encode())
                 return False
         else:
-            response = json.dumps({"data": ["invalid action", tag]}) + "\n"
+            response = json.dumps({"data": [f"invalid action: {function} | {function in func_keys}", tag]}) + "\n"
             await websocket.send(response.encode())
             return False
 
