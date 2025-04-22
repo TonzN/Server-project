@@ -13,7 +13,7 @@ from group_manager import *
 
 HOST = config["HOST"]
 PORT = config["PORT"]
-print_incoming_requests = False
+print_incoming_requests = True
 client_capacity = config["user_capacity"] #to not connect more users than you can handle
 func_keys = config["function_keys"]
 async_function_keys = config["async_function_keys"]
