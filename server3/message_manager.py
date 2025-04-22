@@ -92,7 +92,7 @@ async def pull_user_chat_history_to_user(data, token):
                 chat_history = await db_get_messages_from_user_to(username, sender)
 
 
-            return {"message": [dict(record[0]) for record in chat_history], "signal": "chat"}
+            return {"message": [record for record in chat_history], "signal": "chat"}
         else:
             return "pull_user_chat_history_to_user->invalid token"
     
