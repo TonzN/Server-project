@@ -349,7 +349,7 @@ async def db_get_messages_from_user_to(conn, sender, reciever):
         return await conn.fetch("SELECT * FROM messages WHERE sender = $1 AND reciever = $2", sender, reciever)
     except Exception as e:
         print(f"db_get_messages_from_user_to->Error: {e}")
-        return None
+        return "db_get_messages_from_user_to->Error: {e}"
 
 @with_db_connection
 async def db_get_all_messages_from(conn, username):

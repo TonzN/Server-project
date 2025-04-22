@@ -98,7 +98,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
         data = await asyncio.wait_for(websocket.recv(), timeout=recieve_timout) #format: action: ... data: ...
         data = json.loads(data.decode())
         response = None
-        try: #unpacks data 
+        try: #unpacks data  
             function = data["action"]
             msg = data["data"]
             tag = data["tag"]
