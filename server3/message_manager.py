@@ -71,10 +71,10 @@ async def pull_all_chat_history(data, token):
         
     except asyncio.TimeoutError:    
         print("Socket timout, could not send or recieve in time")
-        return "pull_all_chat_history->Did not send message"
+        return "pull_all_chat_history->Did not send request"
     except Exception as e:  
         print(f"pull_all_chat_history->could not recieve or send back to client or error with provided data {e}")
-        return "pull_all_chat_history->Did not send message"
+        return "pull_all_chat_history->Did not send request"
 
 async def pull_user_chat_history_to_user(data, token):
     try:
@@ -82,7 +82,7 @@ async def pull_user_chat_history_to_user(data, token):
         sender = profile["name"]
         if profile:
             username = data[0]
-            user = db_find_user_profile(username)
+            user = await db_find_user_profile(username)
             if not user:
                 return f"{user} is not online"
             
@@ -94,11 +94,11 @@ async def pull_user_chat_history_to_user(data, token):
     
     except asyncio.TimeoutError:
         print("Socket timout, could not send or recieve in time")
-        return "pull_user_chat_history_to_user->Did not send message"
+        return "pull_user_chat_history_to_user->Did not send request"
     
     except Exception as e:
         print(f"pull_user_chat_history_to_user->could not recieve or send back to client or error with provided data {e}")
-        return "pull_user_chat_history_to_user->Did not send message"
+        return "pull_user_chat_history_to_user->Did not send request"
     
 #----------logic-------------------
 async def logg_message(profile, target_user, msg):
