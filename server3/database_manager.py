@@ -26,7 +26,6 @@ def with_db_connection(func):
             print(f"with_db_connection->Error in database operation: {e}")
     return wrapper
 
-
 #--------------------------------------#
 def wait_for(function, max_wait=5, *args, **kwargs):
     """ yields database manager until the function is successfull 
