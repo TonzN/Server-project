@@ -218,6 +218,22 @@ async def db_get_user_profile(conn, username):
         return None
 
 @with_db_connection
+async def db_find_user_profile(conn, username):
+    """Find user profile in database. Connected by the pool manager\n
+       username = username of the user to find\n
+       conn: automatically handled by the pool manager
+       returns the user true if found, None if not found"""
+    try:
+        user = await conn.fetch("SELECT username FROM users WHERE username = $1", username)
+        if user:
+            return user
+        else:
+            return False
+    except Exception as e:
+        print(f"db_find_user_profile->Error: {e}")
+        return None
+
+@with_db_connection
 async def db_update_user_profile(conn, user_data):
     """Update user profile in database. Connected by the pool manager\n
        user_data = array or list of user data\n
@@ -323,5 +339,54 @@ async def db_get_value_from_user(conn, value, username):
         return await conn.fetch("SELECT $1 FROM users WHERE username = $2", value, username)
     except Exception as e:
         print(f"db_get_value_from_user->Error: {e}")
+        return None
+
+@with_db_connection
+async def db_get_messages_from_user_to(conn, sender, receiver):
+    """Get messages from user to user in database. Connected by the pool manager\n
+       sender = sender of the message\n
+       receiver = receiver of the message\n
+       conn: automatically handled by the pool manager"""
+    try:
+        return await conn.fetch("SELECT * FROM messages WHERE sender = $1 AND receiver = $2", sender, receiver)
+    except Exception as e:
+        print(f"db_get_messages_from_user_to->Error: {e}")
+        return "db_get_messages_from_user_to->Error: {e}"
+
+@with_db_connection
+async def db_get_all_messages_from(conn, username):
+    """Get all messages from user in database. Connected by the pool manager\n
+       username = username of the user to get messages from\n
+       conn: automatically handled by the pool manager"""
+    try:
+        return await conn.fetch("SELECT * FROM messages WHERE sender = $1", username)
+    except Exception as e:
+        print(f"db_get_all_messages_from->Error: {e}")
+        return None
+
+@with_db_connection
+async def db_add_message(conn, data):
+    """Add message to database. Connected by the pool manager\n
+       sender = username of the sender\n
+       recieve = username of the reciever\n
+       message = message to add\n
+       conn: automatically handled by the pool manager"""
+    try:
+        return await conn.execute("INSERT INTO messages "
+        "(sender, receiver, message) "
+        "VALUES ($1, $2, $3)", *data)
+    except Exception as e:
+        print(f"db_add_message->Error: {e}")
+        return None
+
+@with_db_connection
+async def db_get_all_messages_from_group(conn, group):
+    """Get all messages from database. Connected by the pool manager\n
+       conn: automatically handled by the pool manager"""
+    try:
+        return await conn.fetch("SELECT * FROM messages"
+                                "WHERE group = $1", group)
+    except Exception as e:
+        print(f"db_get_all_messages->Error: {e}")
         return None
 
