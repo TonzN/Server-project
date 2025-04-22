@@ -347,7 +347,10 @@ async def db_get_messages_from_user_to(conn, sender, receiver):
        receiver = receiver of the message\n
        conn: automatically handled by the pool manager"""
     try:
-        return await conn.fetch("SELECT * FROM messages WHERE sender = $1 AND receiver = $2", sender, receiver)
+        return await conn.fetch("""SELECT * FROM messages 
+        WHERE (sender = $1 AND receiver = $2)
+           OR (sender = $2 AND receiver = $1)
+        ORDER BY timestamp""", sender, receiver)
     except Exception as e:
         print(f"db_get_messages_from_user_to->Error: {e}")
         return "db_get_messages_from_user_to->Error: {e}"
