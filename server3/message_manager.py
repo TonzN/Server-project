@@ -1,6 +1,7 @@
 from loads import *
 from database_manager import *
 from server_utils import *
+from datetime import datetime
 
 #----------------requests-----------------
 async def message_group(data, token):
@@ -76,6 +77,12 @@ async def pull_all_chat_history(data, token):
         print(f"pull_all_chat_history->could not recieve or send back to client or error with provided data {e}")
         return "pull_all_chat_history->Did not send request"
 
+def serialize_record(record):
+    r = dict(record)
+    if isinstance(r.get("timestamp"), datetime):
+        r["timestamp"] = r["timestamp"].isoformat()  # or str(r["timestamp"])
+    return r
+
 async def pull_user_chat_history_to_user(data, token):
     try:
         profile = get_user_profile(token)
@@ -92,7 +99,7 @@ async def pull_user_chat_history_to_user(data, token):
                 chat_history = await db_get_messages_from_user_to(username, sender)
 
 
-            return {"user": username, "message": [dict(record) for record in chat_history], "signal": "chat"}
+            return {"user": username, "message": [serialize_record(record) for record in chat_history], "signal": "chat"}
         else:
             return "pull_user_chat_history_to_user->invalid token"
     
