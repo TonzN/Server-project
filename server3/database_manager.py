@@ -224,7 +224,7 @@ async def db_find_user_profile(conn, username):
        conn: automatically handled by the pool manager
        returns the user true if found, None if not found"""
     try:
-        user = conn.fetch("SELECT username FROM users WHERE username = $1", username)
+        user = await conn.fetch("SELECT username FROM users WHERE username = $1", username)
         if user:
             return user
         else:
