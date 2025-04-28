@@ -1,6 +1,7 @@
 from loads import *
 import group_manager
 from db_pool_manager import *
+from psycopg2.extensions import quote_ident  # tiny helper
 
 #temp cached data
 _online_users = {}
@@ -11,6 +12,14 @@ _groups = {"global": group_manager.GroupChat("global")}
 server_pool = PoolManager()
 """pool for the main server, this is used to manage the connections to the database, "
 "if you have multiple servers you can add more pools here"""
+SAFE_TYPES = {
+    "text", "varchar", "integer", "bigint", "timestamp",
+    "timestamptz", "boolean", "jsonb"
+}
+
+def _quote_ident(conn, ident: str) -> str:
+    # asyncpg has no public helper, so grab the server's quoting rules
+    return conn._con.quote_ident(ident)  # or use psycopg2.quote_ident if available
 
 
 def with_db_connection(func):
@@ -159,18 +168,23 @@ def update_users_json_file(): #depricated
  #   raise RuntimeError("Database_manager->waitfor(main_pool)-> Could not get main pool")
 
 @with_db_connection
-async def db_create_table(conn, table_name, column_defs):
-    """
-    Create a table in the database if it doesn't exist.
-    
-    Args:
-        conn: The database connection object.
-        table_name: The name of the table to create.
-        columns_defs: A dictionary, column name as key and column definition as value.
-    """
-    column_definitions = ", ".join(f"{col} {col_type}" for col, col_type in column_defs.items())
-    create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({column_definitions})"
-    await conn.execute(create_table_query)
+async def db_create_table(conn, table_name: str, column_defs: dict[str, str]):
+    # 1. Whitelist table name (optional but cheap)
+    if not table_name.isidentifier():
+        raise ValueError("illegal table name")
+
+    # 2. Validate column definitions
+    cols_sql = []
+    for col, col_type in column_defs.items():
+        if not col.isidentifier():
+            raise ValueError(f"bad column name {col!r}")
+        if col_type.split()[0].lower() not in SAFE_TYPES:
+            raise ValueError(f"disallowed type {col_type!r}")
+
+        cols_sql.append(f"{_quote_ident(conn, col)} {col_type}")
+
+    ddl = f"CREATE TABLE IF NOT EXISTS {_quote_ident(conn, table_name)} ({', '.join(cols_sql)})"
+    await conn.execute(ddl)
 
 @with_db_connection
 async def db_get_table(conn, table_name):

@@ -135,7 +135,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
 
         if response:
             msg = response
-            response = json.dumps({"data": [response, tag]}) + "\n"
+            response = json.dumps({"data": [response, tag]}) + "\n" 
             await websocket.send(response.encode())
             #for login sequence
             if function == "veus" or function == "set_user" or function == "create_user":
