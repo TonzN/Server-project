@@ -24,6 +24,8 @@ def verify_password(stored_hash, provided_password):
         return False
 
 def gen_user_id():
+    """Generates a user ID based on the user count in the config file.
+       \nThe ID is a 5-digit number, padded with leading zeros if necessary."""
     creation_id = str(config["user_count"])
     id = ""
     for i in range(5-len(creation_id)):
@@ -42,6 +44,13 @@ def get_id(msg, token):
     return "Unverfied token"
 
 def generate_token():
+    """Generate a JWT token for the user.
+       \nThe token contains a session key and an expiration time.
+       \nThe session key is a unique identifier for the user session.
+       \nThe expiration time is set to 1 hour from the current time.
+         payload = {
+         "session_key": str(uuid.uuid4()), # Unique session key
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)  # Token expires in 1 hour} """
     payload = {
     "session_key": str(uuid.uuid4()),
     "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)  # Token expires in 1 hour
@@ -54,6 +63,8 @@ def invalidate_token(token):
     blacklisted_tokens[token] = token
 
 def validate_token(token):
+    """Validate the token and check if it is blacklisted.
+       \nReturns the payload if valid, otherwise returns None."""
     try:
         if token not in blacklisted_tokens:
             payload = jwt.decode(token, super_duper_secret_key, algorithms=["HS256"])

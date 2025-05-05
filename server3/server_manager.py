@@ -25,6 +25,10 @@ timeout = 30 #heartbeat timout time, if a user doesnt ping the server within thi
 #all functrions created must have an id passed
 
 async def set_client(userdata, token): #only used when a client joins! profile contains server data important to run clients
+    """Sets up the client profile and adds it to the server.
+        This function verifies the user, creates a session profile, and adds the user to the server's user list.
+        It also handles the case where the user is already logged in or if the token is invalid.
+        Users can't be connected if this isnt called first, this is the first step of the login sequence."""
     try: 
         username = userdata["username"]
         sock = userdata["socket"]
@@ -57,6 +61,8 @@ async def set_client(userdata, token): #only used when a client joins! profile c
         return False
 
 async def safe_client_disconnect(client_socket, loop, username, token):
+    """
+    Safely disconnects a client from the server. This function handles the disconnection process,"""
     update_users_json_file()
         
     if username:
@@ -156,6 +162,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
         return "Lost client"
 
 async def send_to_user(websocket, loop, message, tag, timeout):
+    """Sends a message to the client over the WebSocket connection."""
     try:
         response = json.dumps({"data": [message, tag]}) + "\n"
         await websocket.send(response.encode())
@@ -195,6 +202,7 @@ async def login(websocket, loop):
     return False
 
 async def create_user(user_data, token): #userdata must be sent from the client as a dictionary with username and password
+    """Creates a new user in the database if the user does not already exist."""
     username = user_data["username"]
     password = user_data["password"]
     hashed_password = utils.hash_password(password)

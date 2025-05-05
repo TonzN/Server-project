@@ -5,6 +5,8 @@ from datetime import datetime
 
 #----------------requests-----------------
 async def message_group(data, token):
+    """Send a message to a group.
+       \nThe data should be in the format: [group, message]"""
     try:
         profile = get_user_profile(token)
         if profile:
@@ -34,6 +36,9 @@ async def message_group(data, token):
         return "message_group->Did not send message"
 
 async def message_user(data, token):
+    """Send a message to a user.
+       \nThe data should be in the format: [username, message]"""
+    """Returns a message indicating whether the message was sent successfully or not."""
     try:
         profile = get_user_profile(token)
         if profile:
@@ -61,6 +66,10 @@ async def message_user(data, token):
         return "message_user->Did not send message"
 
 async def pull_all_chat_history(data, token):
+    """Pull all chat history from the database.
+       \nThe data should be in the format: [group]"""
+    """Returns a message indicating whether the message was sent successfully or not."""
+
     try:
         profile = get_user_profile(token)
         if profile:
@@ -78,12 +87,17 @@ async def pull_all_chat_history(data, token):
         return "pull_all_chat_history->Did not send request"
 
 def serialize_record(record):
+    """Convert a record to a dictionary and format the timestamp."""
     r = dict(record)
     if isinstance(r.get("timestamp"), datetime):
         r["timestamp"] = r["timestamp"].isoformat()  # or str(r["timestamp"])
     return r
 
 async def pull_user_chat_history_to_user(data, token):
+    """Pull chat history from a user to another user.
+       \nThe data should be in the format: [username]"""
+    """Returns a message indicating whether the message was sent successfully or not."""
+
     try:
         profile = get_user_profile(token)
         sender = profile["name"]
@@ -109,6 +123,8 @@ async def pull_user_chat_history_to_user(data, token):
     
 #----------logic-------------------
 async def logg_message(profile, target_user, msg):
+    """Log a message to the database.
+       \nThe data should be in the format: [username, message]"""
     try:
         if profile and target_user and msg:
             #format: sender, receiver, message
@@ -119,6 +135,8 @@ async def logg_message(profile, target_user, msg):
         return False
     
 async def group_logg_message(profile, group, msg):
+    """Log a message to the database.
+       \nThe data should be in the format: [group, message]"""
     try:
         if profile and group and msg:
             #format: sender, receiver, message

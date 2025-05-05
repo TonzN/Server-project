@@ -6,6 +6,7 @@ def friend_request():
     pass
 
 def kill_server(msg, token):
+    """This function doesnt exist :)"""
     user = get_user_profile(token)
     if user:
         username = user["name"]
@@ -20,6 +21,8 @@ def kill_server(msg, token):
     return "kill_server->Unverfied token"
 
 def show_online_users(msg, token):
+    """Returns a list of all online users
+       return: {"data": users, "signal": signal}"""
     payload = get_user_profile(token)
     signal = msg
     if payload:
@@ -32,11 +35,14 @@ def show_online_users(msg, token):
         return "show_online_users->invalid token"
     
 def update_users_count(amount = 1):
+    """Updates the user count in the config file"""
     config["user_count"] += amount
     with open(config_path, "w") as file:
         json.dump(config, file, indent=4)  
 
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
+    """Updates the heartbeat time of the user to maintain status health"""
+    """Returns "pong" if the user is online and the heartbeat time is updated"""
     if token:
         try:
             user = get_user_profile(token)

@@ -6,6 +6,7 @@ import dataclass as dc
 class WorkerThread:
     def __init__(self, target=[], *args):
         self.schedule = [] # List to hold scheduled tasks: (target, args key)
+        self.failed_tasks = [] # List to hold failed tasks: (target, args key)
         self.target = None
         self.args = {}
         self.thread = None
@@ -43,20 +44,6 @@ class WorkerThread:
         self.thread.start()
         self.thread_id 
 
-    def _force_stop(self):
-        """Forcefully stop the thread (not recommended)."""
-        try:
-            self.thread._stop()  # Use with caution; this is not safe in production
-            self.status = "Stopped"
-        except Exception as e:
-            print(f"Failed to force stop thread: {e}")
-    
-    def retry(self):
-        pass
-
-    def next_task(self):
-        pass
-
     def is_alive(self):
         """Check if the thread is still running."""
         return self.thread.is_alive()
@@ -66,14 +53,26 @@ class WorkerThread:
         if self.start_time:
             return (self.end_time or time.time()) - self.start_time
         return 0
+
+class ThreadPool:
+    """A class to manage a pool of threads for handling tasks.
+    Handles scheduling and queueing of threads."""
+    pass
+
     
 class ThreadManager:
-    """A class to manage threads for handling tasks."""
+    """A class to manage threads for handling tasks.
+    \nIt allows for dynamic threading, scheduling tasks, and managing thread pools."""
+
     def __init__(self):
         self.worker_threads = []
         self.auto_threading = False
         self.max_threads = 10  # Set a maximum number of threads to prevent overloading
-        self.scheduled_tasks = queue.Queue()  # List to hold scheduled tasks
+        self.scheduled_tasks = queue.Queue()  # List to hold scheduled ta
+    
+    def set_max_threads(self, max_threads):
+        """Set the maximum number of threads."""
+        self.max_threads = max_threads
     
     def start_thread(self, target, *args):
         """Start a new thread with the given target function and arguments."""
@@ -125,6 +124,9 @@ class ThreadManager:
         """Wait for all threads to finish."""
         for thread in self.worker_threads:
             thread.join()
+
+    def find_thread(self, thread_id):
+        pass
 
     def stop_threads(self):
         """Stop all threads."""

@@ -3,6 +3,7 @@ from database_manager import *
 import server_utils as utils
 
 async def verify_user(user_data, token):
+    """Verify the user by checking the username and password against the database."""
     try:
         username = user_data["username"]
         password = user_data["password"]
@@ -27,6 +28,7 @@ async def verify_user(user_data, token):
     return 0
 
 async def get_permission_level(msg, token):
+    """Get the permission level of the user from the database."""
     user = utils.get_user_profile(token)
     if user["id"]:
         try:
@@ -40,6 +42,7 @@ async def get_permission_level(msg, token):
     return "change_permission_level->Unverfied token"
 
 async def change_persmission_level(data, token):
+    """Change the permission level of a user."""
     try: #checks if data is given in the right way
         target_user = data[0]
         new_access_level = data[1]

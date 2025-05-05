@@ -1,7 +1,8 @@
 import asyncpg as pg
 
 class PoolManager:
-    """Manages multiple database connection pools.  """
+    """Manages multiple database connection pools. 
+     Allows for dynamic addition and retrieval of pools."""
     def __init__(self):
         self._pools = {}
     
@@ -67,6 +68,7 @@ def close_all_connections(_db_pool):
         print(f"Error closing all connections: {e}")    
 
 async def test_db():
+    """Test the database connection and fetch table names."""
     print("\nTesting database connection...")
     try:
         conn = await pg.connect(
