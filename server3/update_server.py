@@ -23,6 +23,7 @@ async def add_messanges_table():
         "timestamp": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         "message_id": "INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY",
         "encrypted": "BOOLEAN DEFAULT FALSE",
+        "verion": "INTEGER DEFAULT 1",
     }
     await database_manager.db_create_table("messages", column_defs)
 

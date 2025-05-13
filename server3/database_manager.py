@@ -18,6 +18,7 @@ SAFE_TYPES = {
 }
 
 def _quote_ident(conn, ident: str) -> str:
+    """Quote an identifier for use in a SQL statement."""
     # asyncpg has no public helper, so grab the server's quoting rules
     return conn._con.quote_ident(ident)  # or use psycopg2.quote_ident if available
 

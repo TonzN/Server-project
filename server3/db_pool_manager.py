@@ -17,12 +17,20 @@ class PoolManager:
             raise RuntimeError("PoolManager->add_pool->Pool already exists")
 
     def get_pool(self, name, ignore=True):
+        """Get a async pool by name. If the pool does not exist, raise an error or return None."""
         if name in self._pools:
             return self._pools[name]
         elif ignore == False:
             raise RuntimeError("PoolManager->get_pool->Pool not found")
         else:
             return None
+    
+    def get_sync_pool(self, name):
+        """Get a sync pool by name."""
+        if name in self._pools:
+            return self._pools[name]
+        else:
+            raise RuntimeError("PoolManager->get_sync_pool->Pool not found")
         
 async def setup_db_connectionpool():
     """Set up a connection pool to the database.  """
