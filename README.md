@@ -1,4 +1,8 @@
 # super-server
+Trello
+All plans and what im working on is here
+https://trello.com/invite/b/67c5686c672ce7335fc62e9e/ATTI35ae286de1c12820f827fae474d7050e39D62898/app-platform-ting-tang
+
 # Server 3
 Overhauled backend design
 AWS cloud database
