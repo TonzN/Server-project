@@ -1,4 +1,4 @@
-# Communication platform, v3.0 
+### Communication platform, v3.0 
 
 ## Introduction
 The development of this project started as a simple local hosted server and clients accessing via console based client, it started as a simple project to see if i was able to do realtime communication and quickly developed past that. 
@@ -6,11 +6,11 @@ After some tweaking i developed a basic QT interface and cloud hosting this lead
 
 The second build had a lot of issues rooting from trying to build of my first version and it wasnt sustainable to keep developing on the same code, this led me to build server 3 which was a totall restructering aiming to host a sustainable server. 
 
-### Server 3
+# Server 3
 
 ## Server 3 content
 
-## Server Manager
+# Server Manager
 Async
 
 Keeps tracks of all client connections and websockets running them async
@@ -23,7 +23,7 @@ Client disconnection
 
 Request handling
 
-### Database
+# Database
 Build 3 uses a postgreSQL databased hosted on amazon EC2
 To connect to this database you aquire a connection thru db_pool_manager.py
 A connection can be aquired like this
@@ -60,7 +60,7 @@ async def db_find_user_profile(conn, username):
 @with_db_connection -> a decorator that handles getting and releasing connection to database
 ```
 
-## Utils
+# Utils
 
 Password hashing
 
@@ -70,15 +70,15 @@ db format data to json format and vise versa
 
 User profile fetching
 
-## Request Manager
+# Request Manager
 
 Handles client requests to the server, this is where requests that isnt messages is handled.
 
-## Message Manager
+# Message Manager
 
 Handles messaging logic, dms, group chats, logging, logg fetching.
 
-## Security Manager
+# Security Manager
 
 Manager to verify and authenticate clients in a secure way
 
