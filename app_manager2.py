@@ -7,6 +7,7 @@ import websockets
 
 HOST = "wss://wss.vocatus.no/ws/" # The server's hostname or IP address
 PORT = 12345  # The port used by the server
+ENTER = 16777220
 
 class RemoteSignal(QThread):
     signal = pyqtSignal(dict)
@@ -122,6 +123,12 @@ class Chat(QWidget):
 
         self.main_layout.addWidget(self.input_field)
         self.main_layout.addWidget(self.send_button)
+
+    def keyPressEvent(self, event):
+        if event.key() == ENTER:
+            self.send_message()
+
+        event.accept()
     
     def clear_messages(self):
         """Removes all messages from the layout."""
@@ -135,42 +142,46 @@ class Chat(QWidget):
         if not self.send_db:
             self.send_db = True
             message = self.input_field.text().strip()
-            if config["send_type"] == "user":
-                user = config["selected_user"] 
-                if message and user:
-                    msg = client.gen_message("message_user", [user, message], "chat", config["token"])
-                    client.cross_comminication_queues["chat_message"].put_nowait(msg)
-                    client.receieve_events["send_message"].set()
-                    self.input_field.clear()
-                else:
-                    print("invalid text or no selected user to dm")
-            elif config["send_type"] == "group":
-                if config["selected_group"] != False:
-                    if config["selected_group"] == "global":
-                        msg = client.gen_message("message_group", [config["selected_group"], message], "chat", config["token"])
+            if message != "":
+                if config["send_type"] == "user":
+                    user = config["selected_user"] 
+                    if message and user:
+                        msg = client.gen_message("message_user", [user, message], "chat", config["token"])
                         client.cross_comminication_queues["chat_message"].put_nowait(msg)
                         client.receieve_events["send_message"].set()
-                    self.input_field.clear()
-            time.sleep(0.3)
+                        room_subscribe = client.gen_message("join_room", [user], "main", config["token"])
+                        client.cross_comminication_queues["main"].put_nowait(room_subscribe)
+                        self.input_field.clear()
+                    else:
+                        print("invalid text or no selected user to dm")
+                elif config["send_type"] == "group":
+                    if config["selected_group"] != False:
+                        if config["selected_group"] == "global":
+                            msg = client.gen_message("message_group", [config["selected_group"], message], "chat", config["token"])
+                            client.cross_comminication_queues["chat_message"].put_nowait(msg)
+                            client.receieve_events["send_message"].set()
+                            room_subscribe = client.gen_message("join_room", [config["selected_group"]], "main", config["token"])
+                            client.cross_comminication_queues["main"].put_nowait(room_subscribe)
+                            
+                        self.input_field.clear()
+            time.sleep(0.2)
             self.send_db = False
 
     def add_message(self, data):
         username = data["user"]
         message = data["message"]
-        if type(message) == str:
+        if type(message) == str: #single message
             item_text = f"{username}: {message}"
             item = QListWidgetItem(item_text)
             self.chat_list.addItem(item)
             self.chat_list.scrollToBottom()
 
-        elif type(message) == list:
+        elif type(message) == list: #multiple messages
             for i in range(len(message)):
                 item_text = f"{message[i]["sender"]}: {message[i]["message"]}"
                 item = QListWidgetItem(item_text)
                 self.chat_list.addItem(item)
                 self.chat_list.scrollToBottom()
-
-
   
 class DropDownMenu(QWidget):
     def __init__(self, parent=None):
@@ -179,6 +190,7 @@ class DropDownMenu(QWidget):
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.online_users = {}
+        self.current_chat = None
         self.refresh_signal = RemoteSignal()
         self.refresh_signal.signal.connect(self.refresh)
         self.associate_chat = None
@@ -195,14 +207,16 @@ class DropDownMenu(QWidget):
         client.heartbeat_functions["req_online_users"] = request_online_users
 
     def select_group(self):
-        config["send_type"] = "group"
-        config["selected_group"] = "global"
-        if self.associate_chat:
-            self.associate_chat.clear_messages()
-            user = "global"
-            msg = client.gen_message("pull_all_chat_history", [], "chat", config["token"])
-            client.cross_comminication_queues["main"].put_nowait(msg)
-            client.receieve_events["main"].set()
+        if self.current_chat != "global": #prevent multiple reloads of the same chat
+            self.current_chat = "global"
+            config["send_type"] = "group"
+            config["selected_group"] = "global"
+            if self.associate_chat:
+                self.associate_chat.clear_messages()
+                user = "global"
+                msg = client.gen_message("pull_all_chat_history", [], "chat", config["token"])
+                client.cross_comminication_queues["main"].put_nowait(msg)
+                client.receieve_events["main"].set()
 
     def refresh(self, data):
         users = data["data"]
@@ -225,15 +239,18 @@ class DropDownMenu(QWidget):
 
     def select_user(self):
         button = self.sender()
-        config["send_type"] = "user"
-        config["selected_group"] == False
-        config["selected_user"] = button.property("user")
-        if self.associate_chat:
-            self.associate_chat.clear_messages()
-            user = config["selected_user"] 
-            msg = client.gen_message("pull_user_chat_history_to_user", [user], "chat", config["token"])
-            client.cross_comminication_queues["main"].put_nowait(msg)
-            client.receieve_events["main"].set()
+        if self.current_chat != button.property("user"): #prevent multiple reloads of the same user
+            config["send_type"] = "user"
+            config["selected_group"] == False
+            config["selected_user"] = button.property("user")
+            if self.associate_chat :
+                self.associate_chat.clear_messages()
+                user = config["selected_user"] 
+                msg = client.gen_message("pull_user_chat_history_to_user", [user], "chat", config["token"])
+                msg_join_room = client.gen_message("join_room", [user], "main", config["token"])
+                client.cross_comminication_queues["main"].put_nowait(msg)
+                client.receieve_events["main"].set()
+                self.current_chat = user
         
 class Window(QWidget):
     def __init__(self):
@@ -249,8 +266,10 @@ class Window(QWidget):
        
         self.screen_width = 800
         self.screen_height = 600
+        self.login_select = None
      
     def main_menu_layout(self):
+        self.login_select = False
         self.clearLayout()
 
         container = QWidget()
@@ -269,6 +288,12 @@ class Window(QWidget):
         client.signals["chat"] = [self.incoming_message_signal.signal, dict]
        
         self.update_ui()
+    
+    def keyPressEvent(self, event):
+        if event.key() == ENTER and self.login_select:
+            self.login()
+
+        event.accept()
 
     def login(self):
         username = self.login_username.text()
@@ -279,6 +304,7 @@ class Window(QWidget):
 
     def login_menu_layout(self):
         self.clearLayout()
+        self.login_select = True
         window_size = self.size()  # This returns a QSize object
         width = window_size.width()  # Get the width of the window
 
@@ -360,6 +386,7 @@ class Window(QWidget):
         self.update_ui()
 
     def loginLayout(self):
+        self.login_select = False
         self.clearLayout()
         
         # Spacer on top to push the widget downward

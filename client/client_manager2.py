@@ -101,8 +101,8 @@ async def receive_from_server(client_sock, wait_for=2, expected_tag=None, supres
         msg = json.loads(message)
         content = msg["data"][0]
         tag = msg["data"][1]
-        if tag == "chat":
-            print(msg)
+      #  if tag == "chat":
+         #   print(msg)
         add_to_response_log(content)
 
 
