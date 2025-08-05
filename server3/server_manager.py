@@ -153,6 +153,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
         if response:
             msg = response
             response = create_reponse(response, tag)
+            print(f"Response: {response}")
             await websocket.send(response.encode())
             #for login sequence
             if function == "veus" or function == "set_user" or function == "create_user":
