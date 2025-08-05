@@ -10,6 +10,7 @@ from request_manager import *
 from database_manager import *
 from security_manager import *
 from group_manager import *
+import datapacket_manager as dp
 
 HOST = config["HOST"]
 PORT = config["PORT"]
@@ -23,6 +24,11 @@ standby_time = 60*5 #time you allow someone to be trying to login
 timeout = 30 #heartbeat timout time, if a user doesnt ping the server within this time it disconnects
 
 #all functrions created must have an id passed
+
+def create_reponse(data, tag):
+    """Creates a response packet to be sent to the client."""
+    packet = json.dumps({"data": [data, tag]}) + "\n"
+    return packet
 
 async def set_client(userdata, token): #only used when a client joins! profile contains server data important to run clients
     """Sets up the client profile and adds it to the server.
@@ -50,6 +56,7 @@ async def set_client(userdata, token): #only used when a client joins! profile c
                 profile["connection_error_count"] = 0
                 profile["heartbeat"] = time.time()
                 profile["socket"] = sock
+                profile["subscribed_room"] = None
                 add_profile(session_key, profile)
                 print(f"User: {username} connected to server")
                 return True 
@@ -83,36 +90,40 @@ async def safe_client_disconnect(client_socket, loop, username, token):
 
 async def client_recieve_handler(websocket, loop, recieve_timout):
     """
-    Handles incoming messages from a client websocket connection.
-    This function listens for messages from a client, processes the received data,
-    and sends appropriate responses back to the client based on the requested action.
+    Handles messages from a client websocket connection.
+    \nListens for incoming messages, processes the data, and responds based on the requested action.
     Args:
-        websocket (websockets.WebSocketServerProtocol): The websocket connection to the client.
-        loop (asyncio.AbstractEventLoop): The event loop to run asynchronous tasks.
-        recieve_timout (int): The timeout duration for receiving messages from the client.
+        websocket (websockets.WebSocketServerProtocol): The client websocket connection.
+        loop (asyncio.AbstractEventLoop): Event loop for running async tasks.
+        recieve_timout (int): Timeout duration for receiving messages.
+
     Returns:
-        str or list: Returns the function name if the action is successfully processed,
-                     or a list containing the function name and message for specific actions.
-                     Returns "Client closed" if the connection is closed by the client,
-                     or "lost client" if there is a timeout or other exception.
+    \t      (str or list): The processed action name, or [action, message] for specific cases.
+    \n\t\t Returns "Client closed" if the connection is closed,
+    \n\t\t or "lost client" on timeout or other exceptions.
+
     Raises:
-        websockets.exceptions.ConnectionClosed: If the websocket connection is closed.
-        asyncio.TimeoutError: If receiving a message times out.
-        Exception: If there is an error in receiving or sending data.
+        websockets.exceptions.ConnectionClosed: If the connection is closed.
+        asyncio.TimeoutError: On receive timeout.
+        Exception: For other receive/send errors.
     """
+
     try:
         data = await asyncio.wait_for(websocket.recv(), timeout=recieve_timout) #format: action: ... data: ...
-        data = json.loads(data.decode())
+        packet = dp.validate_packet(data, dp.Packet)
         response = None
-        try: #unpacks data  
-            function = data["action"]
-            msg = data["data"]
-            tag = data["tag"]
-            token = data["token"]
-         #   print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
-        except Exception as e:
-            print(f"CRH->Could not get function and msg: {e}")
-            return
+
+        if packet:
+            function = packet.action
+            msg = packet.data
+            tag = packet.tag
+            token = packet.token
+        #   print(f"Successfully unpacked data \n function: {function} \n data: {msg}")
+        else:
+            print("client_recieve_handler->Error unpacking data, invalid packet format")
+            response = create_reponse("Invalid packet format", "error")
+            await websocket.send(response.encode()) 
+            return False
 
         """Server responses must be a dictionary: {"data": [content, tag]}"""
         if function in func_keys:  #checks if action requested exist as something the client can call for
@@ -131,17 +142,17 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
 
             except Exception as e: #sends back error message, this error means something wrong happened while running given function
                 print(f"CRH->Function is not a valid server request: {e}\n Error at: {function}")
-                response = json.dumps({"data": ["Attempted running function and failed.\n Check if the input passed is right", tag]}) + "\n"
+                response = create_reponse("Attempted running function and failed.\n Check if the input passed is right", tag)
                 await websocket.send(response.encode())
                 return False
         else:
-            response = json.dumps({"data": [f"invalid action: {function} | {function in func_keys}", tag]}) + "\n"
+            response = create_reponse(f"invalid action: {function} | {function in func_keys}", tag)
             await websocket.send(response.encode())
             return False
 
         if response:
             msg = response
-            response = json.dumps({"data": [response, tag]}) + "\n" 
+            response = create_reponse(response, tag)
             await websocket.send(response.encode())
             #for login sequence
             if function == "veus" or function == "set_user" or function == "create_user":
@@ -164,7 +175,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
 async def send_to_user(websocket, loop, message, tag, timeout):
     """Sends a message to the client over the WebSocket connection."""
     try:
-        response = json.dumps({"data": [message, tag]}) + "\n"
+        response = create_reponse(message, tag)
         await websocket.send(response.encode())
         return True
 

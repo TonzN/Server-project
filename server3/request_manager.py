@@ -40,6 +40,14 @@ def update_users_count(amount = 1):
     with open(config_path, "w") as file:
         json.dump(config, file, indent=4)  
 
+def join_room(msg, token):
+    """Adds a user to a room"""
+    payload = get_user_profile(token)
+    if payload:
+        print("Attempting to join room")
+    else:
+        return "join_room->invalid token"
+
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
     """Updates the heartbeat time of the user to maintain status health"""
     """Returns "pong" if the user is online and the heartbeat time is updated"""

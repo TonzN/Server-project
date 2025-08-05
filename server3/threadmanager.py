@@ -3,7 +3,7 @@ import threading
 import queue
 import traceback
 import itertools
-import dataclass as dc
+import server3.datapacket_manager as dc
 
 """YALALALALAL im not working on this right now
 """

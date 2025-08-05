@@ -4,17 +4,24 @@ from db_pool_manager import *
 from psycopg2.extensions import quote_ident  # tiny helper
 
 #temp cached data
-_online_users = {}
-_user_profiles = {}
+_online_users = {} # online users are stored here
+_user_profiles = {} # user profiles are stored here
 _groups = {"global": group_manager.GroupChat("global")}
+_rooms = {} # subscribed users to rooms will be stored here   
+debug_room = True      
 
 #centralised serverpool
 server_pool = PoolManager()
 """pool for the main server, this is used to manage the connections to the database, "
 "if you have multiple servers you can add more pools here"""
+
 SAFE_TYPES = {
     "text", "varchar", "integer", "bigint", "timestamp",
     "timestamptz", "boolean", "jsonb"
+}
+
+whitelisted_tables = {
+    "users", "messages", "groups", "rooms"
 }
 
 def _quote_ident(conn, ident: str) -> str:
@@ -52,7 +59,66 @@ def wait_for(function, max_wait=5, *args, **kwargs):
             print(f"wait_for->Error: {e}")
             return False
         time.sleep(0.1)
-    
+
+#--------------------------------------#
+#Room management
+
+def create_room(users):
+    """Creates room for users subscribed to the same room""" 
+    return [user for user in users]
+
+def add_room(room_name, room):
+    """Add room to the rooms list
+       Returns True if room was added, False if room was not found"""
+    try:
+        if type(room) == list:
+            _rooms[room_name] = room
+        return True
+    except Exception as e:
+        print(f"Could not add room {e}")
+        return False
+
+def _join_room(room_name, user):
+    """Join user to room
+       Returns True if user was added, False if user was not found"""
+    try:
+        if get_room(room_name):
+            _rooms[room_name].append(user)
+            return True
+        else:
+            print(f"Room {room_name} not found")
+            return False
+    except Exception as e:
+        print(f"Could not add user to room {e}")
+        return False
+
+def leave_room(room_name, user):
+    """Leave user from room
+       Returns True if user was removed, False if user was not found"""
+    try:
+        if get_room(room_name):
+            _rooms[room_name].remove(user)
+            return True
+        else:
+            print(f"Room {room_name} not found")
+            return False
+    except Exception as e:
+        print(f"Could not remove user from room {e}")
+        return False
+
+def get_room(room_name):
+    """Get room from the rooms list
+       Returns the room if found, None if not found"""
+    try:
+        if room_name in _rooms:
+            return _rooms[room_name]
+        else:
+            return None
+    except Exception as e:
+        print(f"Could not get room {e}")
+        return False
+
+
 #quick lookup for cached data
 #--------------------------------------#
 def get_all_online_users():
@@ -192,7 +258,11 @@ async def db_get_table(conn, table_name):
     """Get table from database. Connected by the pool manager\n
        conn: automatically handled by the pool manager"""
     try:
-        rows = await conn.fetch(f"SELECT * FROM {table_name}")
+        if table_name not in whitelisted_tables: 
+            print(f"db_get_table->Table {table_name} is not whitelisted")
+            return None
+        
+        rows = await conn.fetch(f"SELECT * FROM {table_name}") 
         if len(rows) == 0: #for debugging incase the table is actually empty
             print("Table is empty, messages template")
             show = await conn.fetch("""
