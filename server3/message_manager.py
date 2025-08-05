@@ -2,7 +2,6 @@ from loads import *
 from database_manager import *
 from server_utils import *
 from datetime import datetime
-from server3.datapacket_manager import dataclass
 
 def with_room_manage(func):
     def wrapp(room_name):
