@@ -2,12 +2,14 @@ from loads import *
 import group_manager
 from db_pool_manager import *
 from psycopg2.extensions import quote_ident  # tiny helper
+import server_utils as utils
 
 #temp cached data
 _online_users = {} # online users are stored here
 _user_profiles = {} # user profiles are stored here
 _groups = {"global": group_manager.GroupChat("global")}
-_rooms = {} # subscribed users to rooms will be stored here   
+_user_room2 = {} # subscribed users to rooms will be stored here mapping room ids a_b = room id
+_rooms = {} # rooms are stored here mapping room ids to room objects room_id = [user1, user2]
 debug_room = True      
 
 #centralised serverpool
@@ -63,60 +65,80 @@ def wait_for(function, max_wait=5, *args, **kwargs):
 #--------------------------------------#
 #Room management
 
-def create_room(users):
+def create_2user_room(sender, receiver):
     """Creates room for users subscribed to the same room""" 
-    return [user for user in users]
-
-def add_room(room_name, room):
-    """Add room to the rooms list
-       Returns True if room was added, False if room was not found"""
     try:
-        if type(room) == list:
-            _rooms[room_name] = room
+        sorted_users = sorted([sender, receiver])
+        key = str(sorted_users)
+        if key not in _user_room2:
+            room_id = utils.get_room_id()
+            _user_room2[key] = room_id
+            _rooms[room_id] = sorted([sender, receiver])
+            return room_id
+        else:
+            print("Room already exists for these users")
+            return _user_room2[key]
+    except Exception as e:
+        print(f"create_2user_room->Error: {e}")
+        return None
+     
+
+def switch2_user_room(senderprofile, new_room_id, old_room_id, sender, receiver):
+    try:
+        if "subscribed_room" in senderprofile: 
+            delete_2user_room(sender, receiver)
+            del _rooms[old_room_id]  # remove old room from the rooms list
+            senderprofile["subscribed_room"] = new_room_id
+        else:
+            print("switch2_user_room->Error: senderprofile does not have subscribed_room variable.\nServer profile is incomplete")
+    except Exception as e:
+        print(f"switch2_user_room->Error: {e}")
+        return False
+
+def exit_2user_room(senderprofile, sender, receiver, id=None):
+    """Exit a 2 user room, this will delete the room for the users"""
+    try:
+        delete_2user_room(sender, receiver)
+        if id:
+            if id in _rooms:
+                del _rooms[id]
+        senderprofile["subscribed_room"] = None
         return True
     except Exception as e:
-        print(f"Could not add room {e}")
+        print(f"exit_2user_room->Error: {e}")
         return False
 
-def _join_room(room_name, user):
-    """Join user to room
-       Returns True if user was added, False if user was not found"""
+def delete_2user_room(sender, receiver):
+    """Deletes room for users subscribed to the same room"""
     try:
-        if get_room(room_name):
-            _rooms[room_name].append(user)
+        sorted_users = sorted([sender, receiver])
+        key = str(sorted_users)
+        if key in _user_room2:
+            room_id = _user_room2[key]
+            del _user_room2[key]
+            del _rooms[room_id]
             return True
         else:
-            print(f"Room {room_name} not found")
+            print("Room does not exist for these users")
             return False
     except Exception as e:
-        print(f"Could not add user to room {e}")
+        print(f"delete_2user_room->Error: {e}")
         return False
-
-def leave_room(room_name, user):
-    """Leave user from room
-       Returns True if user was removed, False if user was not found"""
+    
+def get_2user_room_id(sender, receiver):
+    """Get 2 user room for sender and receiver
+       Returns the room id if found, None if not found"""
     try:
-        if get_room(room_name):
-            _rooms[room_name].remove(user)
-            return True
-        else:
-            print(f"Room {room_name} not found")
-            return False
-    except Exception as e:
-        print(f"Could not remove user from room {e}")
-        return False
-
-def get_room(room_name):
-    """Get room from the rooms list
-       Returns the room if found, None if not found"""
-    try:
-        if room_name in _rooms:
-            return _rooms[room_name]
+        sorted_users = sorted([sender, receiver])
+        key = str(sorted_users)
+        if key in _user_room2:
+            room_id = _user_room2[key]
+            return room_id
         else:
             return None
     except Exception as e:
-        print(f"Could not get room {e}")
-        return False
+        print(f"Could not get 2 user room {e}")
+        return None
 
 
 #quick lookup for cached data

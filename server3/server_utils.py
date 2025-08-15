@@ -1,4 +1,5 @@
 from loads import *
+import random
 from database_manager import *
 
 secret_key = "ving78"
@@ -58,6 +59,12 @@ def generate_token():
     # Encode the token
     token = jwt.encode(payload, super_duper_secret_key, algorithm='HS256')
     return token
+
+def get_random_room_id():
+    """Generates a random ID for a room.
+       \nThe ID is a 5-digit number, padded with leading zeros if necessary."""
+    id = str(random.randint(0, 99999)).zfill(5)  # Generates a random 5-digit number
+    return id
 
 def invalidate_token(token):
     blacklisted_tokens[token] = token

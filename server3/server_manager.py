@@ -291,7 +291,7 @@ async def client_handler(websocket, path=None):
     sleep_interval = 0.1  # initial sleep interval
     while client_is_connected: #mainloop just makes sure the client health is safe and the recieve handler is called
         start_time = time.time()
-        if profile:
+        if profile and token:
             crh = await client_recieve_handler(websocket, loop, recieve_timeout)
             if crh == "Client closed":
                 buffer_attemps -= 1
