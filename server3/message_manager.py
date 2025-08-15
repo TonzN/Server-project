@@ -47,7 +47,7 @@ async def message_user(data, token):
             if recieving_user:
                 room = gm.automated_room_asignment(profile, sending_username, recieving_username, "dm", room_id)
                 recieving_client_socket = None
-                if room:
+                if list(room):
                     for user in room:
                         if user == recieving_username:
                             recieving_client_socket = get_user(recieving_username)

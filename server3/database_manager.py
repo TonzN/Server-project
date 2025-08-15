@@ -84,9 +84,11 @@ def create_2user_room(sender, receiver):
 
 def switch2_user_room(senderprofile, new_room_id, old_room_id, sender, receiver):
     try:
+        print(senderprofile)
         if "subscribed_room" in senderprofile: 
             delete_2user_room(sender, receiver)
-            del _rooms[old_room_id]  # remove old room from the rooms list
+            if old_room_id in _rooms:
+                del _rooms[old_room_id]  # remove old room from the rooms list
             senderprofile["subscribed_room"] = new_room_id
         else:
             print("switch2_user_room->Error: senderprofile does not have subscribed_room variable.\nServer profile is incomplete")
