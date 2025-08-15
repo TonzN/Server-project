@@ -65,6 +65,13 @@ def wait_for(function, max_wait=5, *args, **kwargs):
 #--------------------------------------#
 #Room management
 
+def get_2user_room(room_id):
+    if room_id in _rooms:
+        return _rooms[room_id]
+    else:
+        print(f"get_2user_room->Error: Room {room_id} not found")
+        return None
+
 def create_2user_room(sender, receiver):
     """Creates room for users subscribed to the same room""" 
     try:
