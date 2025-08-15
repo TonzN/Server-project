@@ -25,13 +25,16 @@ def automated_room_asignment(senderprofile, sender, reciever, message_type, id=N
                 return None
 
             room_id = db.get_2user_room_id(sender, reciever)
+
+            if not room_id:
+                print("no room found for sender and reciever. Creating a new room.")
+                room_id = db.create_2user_room(sender, reciever)
+
             if room_id == id:
                 return room_id #no room designation change needed. 
             else: #switch room
                 db.switch_room(senderprofile, room_id, id, sender, reciever)
-            
-            if not room_id:
-                room_id = db.create_2user_room(sender, reciever)
+        
             #if room still not found, return None
             if not room_id: #to make sure internal errors dont cause issues for unexepected room errors.
                 print("Error: automated_room_asgn. Could not create or find a 2 user room. \n Sender: {}, Reciever: {}".format(sender, reciever))
