@@ -69,6 +69,11 @@ def get_2user_room(room_id):
     print(f"ALL ROOMS: {_rooms}") #??????????????
     for keys in _rooms:
         print("keys", keys)
+        try:
+            print(keys in _rooms)
+        except Exception as e:
+            print(f"{e}")
+
     print("\n")
     if room_id in _rooms:
         return _rooms[room_id]
