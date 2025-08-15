@@ -78,7 +78,7 @@ def create_2user_room(sender, receiver):
         sorted_users = sorted([sender, receiver])
         key = str(sorted_users)
         if key not in _user_room2:
-            room_id = utils.get_random_room_id()
+            room_id = str(utils.get_random_room_id())
             _user_room2[key] = room_id
             _rooms[room_id] = sorted([sender, receiver])
             print("All rooms", _rooms)
