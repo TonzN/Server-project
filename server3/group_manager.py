@@ -31,7 +31,7 @@ def automated_room_asignment(senderprofile, sender, reciever, message_type, id=N
                 room_id = db.create_2user_room(sender, reciever)
 
             if room_id == id:
-                return room_id #no room designation change needed. 
+                return db._rooms[room_id] #no room designation change needed. 
             else: #switch room
                 db.switch2_user_room(senderprofile, room_id, id, sender, reciever)
         
@@ -40,7 +40,7 @@ def automated_room_asignment(senderprofile, sender, reciever, message_type, id=N
                 print("Error: automated_room_asgn. Could not create or find a 2 user room. \n Sender: {}, Reciever: {}".format(sender, reciever))
                 return None
 
-            return room_id
+            return db._rooms[room_id]
     
     except Exception as e:
         print(f"automated_room_asignment->Error: {e}")
