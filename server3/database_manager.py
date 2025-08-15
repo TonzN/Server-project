@@ -71,7 +71,7 @@ def create_2user_room(sender, receiver):
         sorted_users = sorted([sender, receiver])
         key = str(sorted_users)
         if key not in _user_room2:
-            room_id = utils.get_room_id()
+            room_id = utils.get_random_room_id()
             _user_room2[key] = room_id
             _rooms[room_id] = sorted([sender, receiver])
             return room_id
@@ -80,8 +80,7 @@ def create_2user_room(sender, receiver):
             return _user_room2[key]
     except Exception as e:
         print(f"create_2user_room->Error: {e}")
-        return None
-     
+        return None  
 
 def switch2_user_room(senderprofile, new_room_id, old_room_id, sender, receiver):
     try:
