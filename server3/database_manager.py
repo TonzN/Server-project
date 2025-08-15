@@ -103,8 +103,8 @@ def switch2_user_room(senderprofile, new_room_id, old_room_id, sender, receiver)
     try:
         print(senderprofile)
         if "subscribed_room" in senderprofile: 
-            delete_2user_room(sender, receiver)
             if old_room_id in _rooms:
+                delete_2user_room(sender, receiver, old_room_id)  # delete old room
                 del _rooms[old_room_id]  # remove old room from the rooms list
             senderprofile["subscribed_room"] = new_room_id
         else:
@@ -126,15 +126,16 @@ def exit_2user_room(senderprofile, sender, receiver, id=None):
         print(f"exit_2user_room->Error: {e}")
         return False
 
-def delete_2user_room(sender, receiver):
+def delete_2user_room(sender, receiver, old_room_id):
     """Deletes room for users subscribed to the same room"""
     try:
         sorted_users = sorted([sender, receiver])
         key = str(sorted_users)
         if key in _user_room2:
             room_id = _user_room2[key]
-            del _user_room2[key]
-            del _rooms[room_id]
+            if room_id == old_room_id:
+                del _user_room2[key]
+                del _rooms[room_id]
             return True
         else:
             print("Room does not exist for these users")

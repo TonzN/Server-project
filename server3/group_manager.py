@@ -33,6 +33,7 @@ def automated_room_asignment(senderprofile, sender, reciever, message_type, id=N
             if room_id == id:
                 return db.get_2user_room(room_id) #no room designation change needed. 
             else: #switch room
+                print("SWitching room for sender.")
                 db.switch2_user_room(senderprofile, room_id, id, sender, reciever)
         
             #if room still not found, return None
