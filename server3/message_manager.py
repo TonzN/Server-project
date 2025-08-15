@@ -48,7 +48,7 @@ async def message_user(data, token):
                 room = gm.automated_room_asignment(profile, sending_username, recieving_username, "dm", room_id)
                 print("room", room)
                 recieving_client_socket = None
-                if list(room):
+                if room is list:  # if room is a list, it means it's a group chat
                     for user in room:
                         if user == recieving_username:
                             recieving_client_socket = get_user(recieving_username)
