@@ -24,7 +24,7 @@ def automated_room_asignment(senderprofile, sender, reciever, message_type, id=N
                 print("Error: automated_room_asgn. Reciever is the same as sender. \n Sender: {}, Reciever: {}".format(sender, reciever))
                 return None
 
-            room_id = db.get_2user_room(sender, reciever)
+            room_id = db.get_2user_room_id(sender, reciever)
             if room_id == id:
                 return room_id #no room designation change needed. 
             else: #switch room

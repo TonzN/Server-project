@@ -45,12 +45,15 @@ async def message_user(data, token):
             recieving_user = get_user(recieving_username)
             
             if recieving_user:
-                room = gm.automated_room_asignment(profile, sending_username, recieving_username, "dm")
+                room = gm.automated_room_asignment(profile, sending_username, recieving_username, "dm", room_id)
                 recieving_client_socket = None
-                for user in room:
-                    if user == recieving_username:
-                        recieving_client_socket = get_user(recieving_username)
-                        break
+                if room:
+                    for user in room:
+                        if user == recieving_username:
+                            recieving_client_socket = get_user(recieving_username)
+                            break
+                else:
+                    return f"Was not able to find a room for {sending_username} and {recieving_username}"
             else:
                 return f"{recieving_username} is not online"
             
@@ -205,8 +208,8 @@ async def pull_all_chat_history(data, token):
         profile = get_user_profile(token)
         if profile:
             group = "global"
-            chat_history = await db_get_all_messages_from(group)
-            return {"user": profile["name"], "message": [serialize_record(record) for record in chat_history], "signal": "chat"}
+            chat_history = await db_get_all_messages_from_group(group)
+            return {"user": profile["nme"], "message": [serialize_record(record) for record in chat_history], "signal": "chat"} #name
         else:
             return "pull_all_chat_history->invalid token"
         
