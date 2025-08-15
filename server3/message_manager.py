@@ -46,6 +46,7 @@ async def message_user(data, token):
             
             if recieving_user:
                 room = gm.automated_room_asignment(profile, sending_username, recieving_username, "dm", room_id)
+                print("room", room)
                 recieving_client_socket = None
                 if list(room):
                     for user in room:
@@ -131,7 +132,7 @@ async def message_group(data, token):
                             client_socket = get_user(user)
                             response = json.dumps({"data": [{"user": "[global]"+profile["name"], "message": msg, "signal": "chat"}, "chat", ],  "signals": "chat"}) + "\n"
                             await client_socket.send(response.encode()) #to send other users messages you need their socket
-                            await logg_message(profile, user, msg)
+                            await group_logg_message(profile, group, msg)
                     return f"Sent message to {group}"
             else:
                 return "message_group->invalid group"
