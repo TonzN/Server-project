@@ -66,6 +66,10 @@ def wait_for(function, max_wait=5, *args, **kwargs):
 #Room management
 
 def get_2user_room(room_id):
+    print(f"ALL ROOMS: {_rooms}") #??????????????
+    for keys in _rooms:
+        print("keys", keys)
+    print("\n")
     if room_id in _rooms:
         return _rooms[room_id]
     else:
