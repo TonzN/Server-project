@@ -493,10 +493,9 @@ async def db_get_all_messages_from_group(conn, group):
     """Get all messages from database. Connected by the pool manager\n
        conn: automatically handled by the pool manager"""
     try:
-        group_manager.automated_room_asignment(None, None, None, None, None)  # enforce a bug
         return await conn.fetch("SELECT * FROM messages"
                                 "WHERE group = $1", group)
     except Exception as e:
-        print(f"db_get_all_messages->Error: {e}")
+        print(f"db_get_all_messages_from_group->Error: {e}")
         return None
 
