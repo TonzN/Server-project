@@ -59,9 +59,10 @@ def join_room(recieving_username, token):
                 if success:
                     del invites[potential_key] #remove the invite after joining
                     #Cleanup old room if exists
-                    old_key = payload["rooms_joined"][-1][0]
-                    old_id = payload["rooms_joined"][-1][1]
-                    delete_2user_room(None, None, old_id, old_key)  
+                    if len(payload["rooms_joined"]) > 0:
+                        old_key = payload["rooms_joined"][-1][0]
+                        old_id = payload["rooms_joined"][-1][1]
+                        delete_2user_room(None, None, old_id, old_key)  
 
                     payload["subscribed_room"] = room_id
                     payload["rooms_joined"].append([potential_key, room_id])
@@ -72,9 +73,10 @@ def join_room(recieving_username, token):
                 status, id = create_2user_room(sending_username, recieving_username)
                 if status == "created":
                     #Cleanup old room if exists
-                    old_key = payload["rooms_joined"][-1][0]
-                    old_id = payload["rooms_joined"][-1][1]
-                    delete_2user_room(None, None, old_id, old_key)  
+                    if len(payload["rooms_joined"]) > 0:
+                        old_key = payload["rooms_joined"][-1][0]
+                        old_id = payload["rooms_joined"][-1][1]
+                        delete_2user_room(None, None, old_id, old_key)  
 
                     #create new room and send invite
                     payload["subscribed_room"] = id
