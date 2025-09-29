@@ -57,6 +57,7 @@ async def set_client(userdata, token): #only used when a client joins! profile c
                 profile["heartbeat"] = time.time()
                 profile["socket"] = sock
                 profile["subscribed_room"] = None
+                profile["rooms_joined"] = [] #for cleanup and easier management of rooms, [[key, room_id]]
                 add_profile(session_key, profile)
                 add_room_invite(username) #adds user to room invites list
                 print(f"User: {username} connected to server")
@@ -82,6 +83,12 @@ async def safe_client_disconnect(client_socket, loop, username, token):
     payload = utils.validate_token(token)
     if payload:
         session_key = payload["session_key"]
+        rooms_joined = payload["rooms_joined"]
+        for room in rooms_joined:
+            key = room[0]
+            room_id = room[1]
+            delete_2user_room(None, None, room_id, key) #cleans up all 2 user rooms the user was in
+            
         remove_profile(session_key)
         utils.invalidate_token(token)
 

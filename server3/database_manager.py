@@ -144,11 +144,12 @@ def exit_2user_room(senderprofile, sender, receiver, id=None):
         print(f"exit_2user_room->Error: {e}")
         return False
 
-def delete_2user_room(sender, receiver, old_room_id):
+def delete_2user_room(sender, receiver, old_room_id, key=None):
     """Deletes room for users subscribed to the same room"""
     try:
-        sorted_users = sorted([sender, receiver])
-        key = str(sorted_users)
+        if key == None:
+            sorted_users = sorted([sender, receiver])
+            key = str(sorted_users)
         if key in _user_room2:
             room_id = _user_room2[key]
             if room_id == old_room_id:

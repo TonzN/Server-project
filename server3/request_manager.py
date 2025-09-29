@@ -58,18 +58,32 @@ def join_room(recieving_username, token):
                 success = join_2user_room(sending_username, room_id)
                 if success:
                     del invites[potential_key] #remove the invite after joining
+                    #Cleanup old room if exists
+                    old_key = payload["rooms_joined"][-1][0]
+                    old_id = payload["rooms_joined"][-1][1]
+                    delete_2user_room(None, None, old_id, old_key)  
+
                     payload["subscribed_room"] = room_id
+                    payload["rooms_joined"].append([potential_key, room_id])
                     return "join_room->success"
 
             #If no invite create a room and invite the user
             if recieving_user:
                 status, id = create_2user_room(sending_username, recieving_username)
                 if status == "created":
+                    #Cleanup old room if exists
+                    old_key = payload["rooms_joined"][-1][0]
+                    old_id = payload["rooms_joined"][-1][1]
+                    delete_2user_room(None, None, old_id, old_key)  
+
+                    #create new room and send invite
                     payload["subscribed_room"] = id
                     invites = get_room_invite(recieving_username)
                     invites[potential_key] = id
+                    payload["rooms_joined"].append([potential_key, id])
                     print(f"Room created between {sending_username} and {recieving_username} with id {id}")
                     return "join_room->room created->invite sent"
+                
                 elif status == "found":
                     print(f"Room already exists between {sending_username} and {recieving_username} with id {id}")
                     return "join_room->room_exists"
