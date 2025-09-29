@@ -9,7 +9,10 @@ _online_users = {} # online users are stored here
 _user_profiles = {} # user profiles are stored here
 _groups = {"global": group_manager.GroupChat("global")}
 _user_room2 = {} # subscribed users to rooms will be stored here mapping room ids a_b = room id
-_rooms = {} # rooms are stored here mapping room ids to room objects room_id = [user1, user2]
+_rooms = {} # rooms are stored here mapping room ids to room objects room_id = {users: [], invited: []}
+_room_invites = {} # room invites are stored here mapping room ids to invited users user = {invite: room_id}
+
+
 debug_room = True      
 
 #centralised serverpool
@@ -65,13 +68,28 @@ def wait_for(function, max_wait=5, *args, **kwargs):
 #--------------------------------------#
 #Room management
 
+def join_2user_room(user, room_id):
+    """Adds a user to a 2 user room if they have been invited"""
+    room = get_2user_room(room_id)
+    if room:
+        if user not in room["users"] and user in room["invited"]:
+            room["users"].append(user)
+            room["invited"].remove(user)
+            return True
+        else:
+            print(f"join_2user_room->Error: User {user} is already in the room or not invited")
+            return False
+    else:
+        print(f"join_2user_room->Error: Room {room_id} not found")
+        return False
+
 def get_2user_room(room_id):
     print(f"ALL ROOMS: {_rooms}") #??????????????
     for keys in _rooms:
         print("keys", keys)
         try:
             print(keys in _rooms)
-        except Exception as e:
+        except Exception as e:                                    
             print(f"{e}")
 
     print("\n")
@@ -89,15 +107,15 @@ def create_2user_room(sender, receiver):
         if key not in _user_room2:
             room_id = str(utils.get_random_room_id())
             _user_room2[key] = room_id
-            _rooms[room_id] = sorted([sender, receiver])
+            _rooms[room_id] = {"users": [sender], "invited": [receiver]} #initially only the sender is in the room
             print("All rooms", _rooms)
-            return room_id
+            return "created", room_id
         else:
             print("Room already exists for these users")
-            return _user_room2[key]
+            return "found", _user_room2[key]
     except Exception as e:
         print(f"create_2user_room->Error: {e}")
-        return None  
+        return None
 
 def switch2_user_room(senderprofile, new_room_id, old_room_id, sender, receiver):
     try:
@@ -162,6 +180,15 @@ def get_2user_room_id(sender, receiver):
 
 #quick lookup for cached data
 #--------------------------------------#
+def get_room_invite(user):
+    """Get room invite from the room invites list
+       Returns the invite of the user if found"""
+    if user in _room_invites:
+        return _room_invites[user]
+
+def add_room_invite(user):
+    _room_invites[user] = {}
+
 def get_all_online_users():
     """Get all online users from the online users list
        Returns a list of all online users"""

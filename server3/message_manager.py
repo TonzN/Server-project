@@ -58,8 +58,11 @@ async def message_user(data, token):
             else:
                 return f"{recieving_username} is not online"
             
-          
-            response = json.dumps({"data": [{"user": sending_username, "message": msg, "signal": "chat"}, "chat"]}) + "\n"
+            if recieving_client_socket:
+                response = json.dumps({"data": [{"user": sending_username, "message": msg, "signal": "chat"}, "chat"]}) + "\n"
+            else:
+                return f"{recieving_username} is not in the group chat"
+            
             await recieving_client_socket.send(response.encode()) #to send other users messages you need their socket
 
             try:

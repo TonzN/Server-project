@@ -20,28 +20,12 @@ def automated_room_asignment(senderprofile, sender, reciever, message_type, id=N
     try:
         #verify sender and reciever. 
         if message_type == "dm": #asign sender/reciever users to a 2 user room
-            if reciever == sender: #if the reciever is the same as the sender, return None
-                print("Error: automated_room_asgn. Reciever is the same as sender. \n Sender: {}, Reciever: {}".format(sender, reciever))
-                return None
-
-            room_id = db.get_2user_room_id(sender, reciever)
-
-            if not room_id:
-                print("no room found for sender and reciever. Creating a new room.")
-                room_id = db.create_2user_room(sender, reciever)
-
-            if room_id == id:
-                return db.get_2user_room(room_id) #no room designation change needed. 
-            else: #switch room
-                print("SWitching room for sender.")
-                db.switch2_user_room(senderprofile, room_id, id, sender, reciever)
-        
-            #if room still not found, return None
-            if not room_id: #to make sure internal errors dont cause issues for unexepected room errors.
-                print("Error: automated_room_asgn. Could not create or find a 2 user room. \n Sender: {}, Reciever: {}".format(sender, reciever))
-                return None
-
-            return db.get_2user_room(room_id)
+            room_id = senderprofile["subscribed_room"]
+            if room_id:
+                return db.get_2user_room(room_id)["users"]
+            else:
+                print(f"automated_room_asignment->No room found for users {sender} and {reciever}")
+                return 
     
     except Exception as e:
         print(f"automated_room_asignment->Error: {e}")

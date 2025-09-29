@@ -58,6 +58,7 @@ async def set_client(userdata, token): #only used when a client joins! profile c
                 profile["socket"] = sock
                 profile["subscribed_room"] = None
                 add_profile(session_key, profile)
+                add_room_invite(username) #adds user to room invites list
                 print(f"User: {username} connected to server")
                 return True 
             

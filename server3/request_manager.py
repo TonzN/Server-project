@@ -40,13 +40,45 @@ def update_users_count(amount = 1):
     with open(config_path, "w") as file:
         json.dump(config, file, indent=4)  
 
-def join_room(msg, token):
-    """Adds a user to a room"""
-    payload = get_user_profile(token)
-    if payload:
-        print("Attempting to join room")
-    else:
-        return "join_room->invalid token"
+def join_room(recieving_username, token):
+    """Adds a user to a room or creates a new room if it doesn't exist"""
+    try:
+        payload = get_user_profile(token)
+        if payload:
+            sending_username = payload["name"]
+            print(f"User {sending_username} is attempting to join a room with {recieving_username}")
+            recieving_user = get_user(recieving_username)
+            potential_key = str(sorted([sending_username, recieving_username]))
+
+            #Check for existing room invites
+            invites = get_room_invite(sending_username)
+            if potential_key in invites:
+                room_id = invites[potential_key] 
+                success = join_2user_room(sending_username, room_id)
+                if success:
+                    del invites[potential_key] #remove the invite after joining
+                    payload["subscribed_room"] = room_id
+                    return "join_room->success"
+
+            #If no invite create a room and invite the user
+            if recieving_user:
+                status, id = create_2user_room(sending_username, recieving_username)
+                if status == "created":
+                    payload["subscribed_room"] = id
+                    invites = get_room_invite(recieving_username)
+                    invites[potential_key] = id
+                    print(f"Room created between {sending_username} and {recieving_username} with id {id}")
+                    return "join_room->room created->invite sent"
+                elif status == "found":
+                    print(f"Room already exists between {sending_username} and {recieving_username} with id {id}")
+                    return "join_room->room_exists"
+
+        else:
+            return "join_room->invalid token"
+        
+    except Exception as e:
+        print(f"join_room->Error: {e}")
+        return "join_room->error"
 
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
     """Updates the heartbeat time of the user to maintain status health"""
