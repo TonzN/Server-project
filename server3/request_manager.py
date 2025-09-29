@@ -44,6 +44,7 @@ def join_room(recieving_username, token):
     """Adds a user to a room or creates a new room if it doesn't exist"""
     try:
         payload = get_user_profile(token)
+        recieving_username = recieving_username[0]
         if payload:
             sending_username = payload["name"]
             print(f"User {sending_username} is attempting to join a room with {recieving_username}")
