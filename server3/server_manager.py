@@ -83,11 +83,15 @@ async def safe_client_disconnect(client_socket, loop, username, token):
     payload = utils.validate_token(token)
     if payload:
         session_key = payload["session_key"]
-        rooms_joined = payload["rooms_joined"]
-        for room in rooms_joined:
-            key = room[0]
-            room_id = room[1]
-            delete_2user_room(None, None, room_id, key) #cleans up all 2 user rooms the user was in
+        try:
+            user_profile = get_profile(session_key)
+            rooms_joined = user_profile["rooms_joined"]
+            for room in rooms_joined:
+                key = room[0]
+                room_id = room[1]
+                delete_2user_room(None, None, room_id, key) #cleans up all 2 user rooms the user was in
+        except Exception as e:
+            print(f"safe_client_disconnect->Error cleaning up rooms: {e}")
             
         remove_profile(session_key)
         utils.invalidate_token(token)
