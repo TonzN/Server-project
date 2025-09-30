@@ -13,7 +13,7 @@ _rooms = {} # rooms are stored here mapping room ids to room objects room_id = {
 _room_invites = {} # room invites are stored here mapping room ids to invited users user = {invite: room_id}
 
 
-debug_room = True      
+debug_room = False      
 
 #centralised serverpool
 server_pool = PoolManager()
@@ -84,13 +84,14 @@ def join_2user_room(user, room_id):
         return False
 
 def get_2user_room(room_id):
-    print(f"ALL ROOMS: {_rooms}") #??????????????
-    for keys in _rooms:
-        print("keys", keys)
-        try:
-            print(keys in _rooms)
-        except Exception as e:                                    
-            print(f"{e}")
+    if debug_room:
+        print(f"ALL ROOMS: {_rooms}") #??????????????
+        for keys in _rooms:
+            print("keys", keys)
+            try:
+                print(keys in _rooms)
+            except Exception as e:                                    
+                print(f"{e}")
 
     print("\n")
     if room_id in _rooms:
@@ -108,7 +109,7 @@ def create_2user_room(sender, receiver):
             room_id = str(utils.get_random_room_id())
             _user_room2[key] = room_id
             _rooms[room_id] = {"users": [sender], "invited": [receiver]} #initially only the sender is in the room
-            print("All rooms", _rooms)
+           # print("All rooms", _rooms)
             return "created", room_id
         else:
             print("Room already exists for these users")
@@ -119,7 +120,7 @@ def create_2user_room(sender, receiver):
 
 def switch2_user_room(senderprofile, new_room_id, old_room_id, sender, receiver):
     try:
-        print(senderprofile)
+    #    print(senderprofile)
         if "subscribed_room" in senderprofile: 
             if old_room_id in _rooms:
                 delete_2user_room(sender, receiver, old_room_id)  # delete old room

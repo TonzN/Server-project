@@ -64,6 +64,7 @@ def join_room(recieving_username, token):
                         old_id = payload["rooms_joined"][-1][1]
                         delete_2user_room(None, None, old_id, old_key)  
 
+                    print(f"User {sending_username} joined room with {recieving_username} with id {room_id} and deleted room {old_key}:{old_id}")
                     payload["subscribed_room"] = room_id
                     payload["rooms_joined"].append([potential_key, room_id])
                     return "join_room->success"
