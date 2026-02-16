@@ -348,12 +348,12 @@ async def main():
     print("Found example usertable:")
     print(await db_get_user_profile("Toni"))
     print("\n Checking messanges table...\n")
-    messages = await db_get_table("messages", limit=10, order_by="sender", newest_first=True)
+    messages = await db_get_table("messages", limit=10, order_by="message_id", newest_first=True)
     for msg in messages:
         print("-" * 50)
         for key, value in msg.items():
             print(f"{key:<15}: {value}")
-            
+
     print("\nStarting server...")
     await run_server()
 

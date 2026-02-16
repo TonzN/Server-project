@@ -37,7 +37,7 @@ if update_db:
             print("Could not connect to database, closing server")
             return
         print("Connected to database")
-        messages = await database_manager.db_get_table("messages", limit=20, order_by="sender", newest_first=True)
+        messages = await database_manager.db_get_table("messages", limit=20, order_by="message_id", newest_first=True)
         for msg in messages:
             print("-" * 50)
             for key, value in msg.items():
