@@ -387,7 +387,6 @@ async def db_get_table(
         return None
 
 
-
 @with_db_connection
 async def db_get_user_profile(conn, username):
     """Get user profile from database. Connected by the pool manager"""
@@ -573,6 +572,30 @@ async def db_add_message(conn, data):
     except Exception as e:
         print(f"db_add_message->Error: {e}")
         return None
+
+@with_db_connection
+async def db_remove_message(conn, message_id):
+    """Remove a message from database by id.
+       conn: automatically handled by the pool manager
+    """
+    try:
+        result = await conn.execute(
+            "DELETE FROM messages WHERE id = $1",
+            message_id
+        )
+
+        # result looks like: "DELETE 1" or "DELETE 0"
+        deleted_count = int(result.split(" ")[1])
+
+        if deleted_count == 0:
+            print(f"db_remove_message->No message found with id {message_id}")
+            return False
+
+        return True
+
+    except Exception as e:
+        print(f"db_remove_message->Error: {e}")
+        return False
 
 @with_db_connection
 async def db_get_all_messages_from_group(conn, group):
