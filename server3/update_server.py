@@ -27,7 +27,7 @@ async def add_messanges_table():
     }
     await database_manager.db_create_table("messages", column_defs)
 
-
+"""Test db"""
 if update_db:
     async def run_update():
          
@@ -37,7 +37,7 @@ if update_db:
             print("Could not connect to database, closing server")
             return
         print("Connected to database")
-        await add_messanges_table()
+
        
     asyncio.run(run_update())
 

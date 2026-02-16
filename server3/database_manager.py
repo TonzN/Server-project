@@ -323,33 +323,53 @@ async def db_create_table(conn, table_name: str, column_defs: dict[str, str]):
     ddl = f"CREATE TABLE IF NOT EXISTS {_quote_ident(conn, table_name)} ({', '.join(cols_sql)})"
     await conn.execute(ddl)
 
-@with_db_connection
-async def db_get_table(conn, table_name, limit: int | None = None, newest_first: bool = True):
-    """Get table from database. Connected by the pool manager
-       conn: automatically handled by the pool manager
 
-       limit: how many rows to return (None = all)
-       newest_first: if True, orders by id DESC (requires an id column)
+@with_db_connection
+async def db_get_table(
+    conn,
+    table_name: str,
+    limit: int | None = None,
+    order_by: str | None = None,   # e.g. "created_at"
+    newest_first: bool = True
+):
+    """Get table from database.
+       limit: number of rows (None = all)
+       order_by: column name to order by (None = no ordering)
+       newest_first: DESC if True else ASC (only used if order_by is set)
     """
     try:
         if table_name not in whitelisted_tables:
             print(f"db_get_table->Table {table_name} is not whitelisted")
             return None
 
-        # Build query safely (table name must be whitelisted; cannot be parameterized)
-        order_clause = "ORDER BY id DESC" if newest_first else "ORDER BY id ASC"
+        # Optional: validate order_by to avoid SQL injection via column name
+        if order_by is not None:
+            col_rows = await conn.fetch("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = $1
+            """, table_name)
+            cols = {r["column_name"] for r in col_rows}
+            if order_by not in cols:
+                print(f"db_get_table->Invalid order_by column: {order_by}")
+                return None
+
+        order_clause = ""
+        if order_by is not None:
+            direction = "DESC" if newest_first else "ASC"
+            order_clause = f' ORDER BY "{order_by}" {direction}'
 
         if limit is None:
-            query = f"SELECT * FROM {table_name} {order_clause}"
+            query = f"SELECT * FROM {table_name}{order_clause}"
             rows = await conn.fetch(query)
         else:
             if limit <= 0:
                 print("db_get_table->limit must be > 0")
                 return None
-            query = f"SELECT * FROM {table_name} {order_clause} LIMIT $1"
+            query = f"SELECT * FROM {table_name}{order_clause} LIMIT $1"
             rows = await conn.fetch(query, limit)
 
-        if len(rows) == 0:  # for debugging incase the table is actually empty
+        if not rows:
             print("Table is empty, messages template")
             show = await conn.fetch("""
                 SELECT column_name, data_type
@@ -359,12 +379,13 @@ async def db_get_table(conn, table_name, limit: int | None = None, newest_first:
             for r in show:
                 print(r)
             return None
-        else:
-            return [dict(r) for r in rows]
+
+        return [dict(r) for r in rows]
 
     except Exception as e:
         print(f"db_get_table->Error: {e}")
         return None
+
 
 
 @with_db_connection
