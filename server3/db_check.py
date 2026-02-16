@@ -26,9 +26,9 @@ async def run_test():
             print(f"{key:<15}: {value}")
 
     while True:
-        remove = input("Remove message yes/no")
+        remove = input("Remove message yes/no? ")
         if remove.lower() == "yes":
-            msg_id = input("message id: ")
+            msg_id = int(input("message id: "))
             removed = await db_remove_message(msg_id)
             if removed:
                 print(f"Message {msg_id} removed")
