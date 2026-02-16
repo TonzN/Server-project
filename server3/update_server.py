@@ -38,7 +38,7 @@ if update_db:
             return
         print("Connected to database")
         print(await database_manager.db_get_table("messages", limit=20, order_by="sender", newest_first=True))
-       
+        await database_manager.db_remove_message(message_id=33)
     asyncio.run(run_update())
 
 update_json_data = False
