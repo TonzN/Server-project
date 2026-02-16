@@ -580,7 +580,7 @@ async def db_remove_message(conn, message_id):
     """
     try:
         result = await conn.execute(
-            "DELETE FROM messages WHERE id = $1",
+            "DELETE FROM messages WHERE message_id = $1",
             message_id
         )
 
