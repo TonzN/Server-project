@@ -37,8 +37,12 @@ if update_db:
             print("Could not connect to database, closing server")
             return
         print("Connected to database")
-        print(await database_manager.db_get_table("messages", limit=20, order_by="sender", newest_first=True))
-        await database_manager.db_remove_message(message_id=33)
+        messages = await database_manager.db_get_table("messages", limit=20, order_by="sender", newest_first=True)
+        for msg in messages:
+            print("-" * 50)
+            for key, value in msg.items():
+                print(f"{key:<15}: {value}")
+
     asyncio.run(run_update())
 
 update_json_data = False
