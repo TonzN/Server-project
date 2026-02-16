@@ -33,7 +33,16 @@ def show_online_users(msg, token):
         return {"data": users, "signal": signal}
     else:
         return "show_online_users->invalid token"
-    
+
+def show_room_users(msg, token):
+    payload = get_user_profile(token)
+    signal = msg
+    if payload:
+        users = {"data": []}
+        return {"data": users, "signal": signal} 
+    else:
+        return "show_room_users->invalid token"
+
 def update_users_count(amount = 1):
     """Updates the user count in the config file"""
     config["user_count"] += amount

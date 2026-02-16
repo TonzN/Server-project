@@ -344,7 +344,7 @@ async def db_get_table(conn, table_name):
                 print(r)
             return None
         else:
-            return dict(rows[0])
+            return dict(rows[0:10])
         
     except Exception as e:
         print(f"db_get_table->Error: {e}")
