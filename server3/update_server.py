@@ -37,7 +37,7 @@ if update_db:
             print("Could not connect to database, closing server")
             return
         print("Connected to database")
-
+        print(await database_manager.db_get_table("messages", limit=20, order_by="sender", newest_first=True))
        
     asyncio.run(run_update())
 
