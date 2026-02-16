@@ -348,7 +348,7 @@ async def main():
     print("Found example usertable:")
     print(await db_get_user_profile("Toni"))
     print("\n Checking messanges table...\n")
-    print(await db_get_table("messages"))
+    print(await db_get_table("messages", limit=15))
     print("\nStarting server...")
     await run_server()
 

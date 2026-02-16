@@ -324,16 +324,32 @@ async def db_create_table(conn, table_name: str, column_defs: dict[str, str]):
     await conn.execute(ddl)
 
 @with_db_connection
-async def db_get_table(conn, table_name):
-    """Get table from database. Connected by the pool manager\n
-       conn: automatically handled by the pool manager"""
+async def db_get_table(conn, table_name, limit: int | None = None, newest_first: bool = True):
+    """Get table from database. Connected by the pool manager
+       conn: automatically handled by the pool manager
+
+       limit: how many rows to return (None = all)
+       newest_first: if True, orders by id DESC (requires an id column)
+    """
     try:
-        if table_name not in whitelisted_tables: 
+        if table_name not in whitelisted_tables:
             print(f"db_get_table->Table {table_name} is not whitelisted")
             return None
-        
-        rows = await conn.fetch(f"SELECT * FROM {table_name}") 
-        if len(rows) == 0: #for debugging incase the table is actually empty
+
+        # Build query safely (table name must be whitelisted; cannot be parameterized)
+        order_clause = "ORDER BY id DESC" if newest_first else "ORDER BY id ASC"
+
+        if limit is None:
+            query = f"SELECT * FROM {table_name} {order_clause}"
+            rows = await conn.fetch(query)
+        else:
+            if limit <= 0:
+                print("db_get_table->limit must be > 0")
+                return None
+            query = f"SELECT * FROM {table_name} {order_clause} LIMIT $1"
+            rows = await conn.fetch(query, limit)
+
+        if len(rows) == 0:  # for debugging incase the table is actually empty
             print("Table is empty, messages template")
             show = await conn.fetch("""
                 SELECT column_name, data_type
@@ -344,11 +360,12 @@ async def db_get_table(conn, table_name):
                 print(r)
             return None
         else:
-            return dict(rows[0:10])
-        
+            return [dict(r) for r in rows]
+
     except Exception as e:
         print(f"db_get_table->Error: {e}")
         return None
+
 
 @with_db_connection
 async def db_get_user_profile(conn, username):
