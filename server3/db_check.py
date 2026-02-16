@@ -25,4 +25,16 @@ async def run_test():
         for key, value in msg.items():
             print(f"{key:<15}: {value}")
 
+    while True:
+        remove = input("Remove message yes/no")
+        if remove.lower() == "yes":
+            msg_id = input("message id: ")
+            removed = await db_remove_message(msg_id)
+            if removed:
+                print(f"Message {msg_id} removed")
+            else:
+                print("Unsuccesfull removing msg")
+        if remove.lower() == "no":
+            break
+
 asyncio.run(run_test())
