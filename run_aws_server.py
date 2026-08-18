@@ -1,3 +1,13 @@
 import subprocess
+import os
 
-subprocess.run(["cmd", "/c", "start cmd /k ssh -i C:/Users/LAB/Documents/secretkey.pem ubuntu@51.20.43.51"])        
+key = os.path.expanduser(r"~\.ssh\id_ed25519")
+
+subprocess.run([
+    "cmd",
+    "/c",
+    "start",
+    "cmd",
+    "/k",
+    f'ssh -i "{key}" administrator@85.190.97.54'
+])

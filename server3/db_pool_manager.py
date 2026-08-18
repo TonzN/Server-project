@@ -79,10 +79,11 @@ async def test_db():
     print("\nTesting database connection...")
     try:
         conn = await pg.connect(
-            host="database.cf0yoiaesmqc.eu-north-1.rds.amazonaws.com",
-            port="5432",
-            user="postgres",
-            password="toniNyt05#2030",
+            host="127.0.0.1",
+            port=5432,
+            database="database",
+            user="toni",
+            password="1234"
         )
     except Exception as e:
         print(f"test_db->Error connecting to database: {e}")
