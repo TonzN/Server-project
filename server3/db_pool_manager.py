@@ -27,12 +27,11 @@ async def setup_db_connectionpool():
     """Set up a connection pool to the database.  """
     try:
         pool = await pg.create_pool(
-            host="database.cf0yoiaesmqc.eu-north-1.rds.amazonaws.com",
-            port="5432",
-            user="postgres",
-            password="toniNyt05#2030",
-            min_size = 1,   
-            max_size = 10
+            HOST="127.0.0.1",
+            PORT= 5432,
+            DATABASE= "database",
+            USER="toni",
+            PASSWORD="1234"
         )
         return pool
         

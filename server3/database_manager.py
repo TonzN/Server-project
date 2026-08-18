@@ -216,7 +216,7 @@ async def db_get_user_profile(conn, username):
     except Exception as e:
         print(f"db_get_user_profile->Error: {e}")
         return None
-
+ 
 @with_db_connection
 async def db_find_user_profile(conn, username):
     """Find user profile in database. Connected by the pool manager\n
