@@ -37,6 +37,11 @@ if update_db:
             print("Could not connect to database, closing server")
             return
         print("Connected to database")
+        print("\n Creating messages table...\n")
+        await add_messanges_table()
+        print("\n Updating users...\n")
+        await update_users()
+        
         messages = await database_manager.db_get_table("messages", limit=20, order_by="message_id", newest_first=True)
         for msg in messages:
             print("-" * 50)
