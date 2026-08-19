@@ -51,6 +51,7 @@ def with_db_connection(func):
                 return await func(conn, *args, **kwargs)
         except Exception as e:
             print(f"with_db_connection->Error in database operation: {e}")
+            raise 
     return wrapper
 
 #--------------------------------------#
@@ -458,7 +459,16 @@ async def db_add_user_data(conn, username, value, data):
        data = data to add\n
        conn: automatically handled by the pool manager"""
     try:
-        return await conn.execute("UPDATE users SET $1 = $2 WHERE username = $3", value, data, username)
+        if not value.isidentifier():
+            raise ValueError("Invalid column name")
+
+        query = (
+            f"UPDATE users "
+            f"SET {_quote_ident(value)} = $1 "
+            f"WHERE username = $2"
+        )
+
+        return await conn.execute(query, data, username)
     except Exception as e:
         print(f"db_add_user_data->Error: {e} \n username: {username}, value: {value}, data: {data}")
         return None
@@ -493,20 +503,6 @@ async def db_add_multiple_user_profile(conn, user_data):
         print(f"db_add_multiple_user_profile->Error: {e}")
         return None
 
-@with_db_connection
-async def db_update_user_profile(conn, user_data):
-    """Update user profile in database. Connected by the pool manager\n
-       user_data = array or list of user data\n
-       conn: automatically handled by the pool manager\n
-       This is used for bulk updates"""
-    try:
-        return await conn.executemany("UPDATE users "
-        "(username, password, id, permission_level, security_mode) "
-        "VALUES ($1, $2, $3, $4, $5) WHERE username = $username", user_data, user_data[0])
-    
-    except Exception as e:
-        print(f"db_update_user_profile->Error: {e}")
-        return None
 
 @with_db_connection
 async def db_delete_user_profile(conn, username):
@@ -530,12 +526,20 @@ async def db_get_all_user_profile(conn):
         return None
 
 @with_db_connection
-async def db_get_value_from_user(conn, value, username):
+async def db_get_value_from_user(conn, value, username):    
     """Get value from user profile in database. Connected by the pool manager\n
        key = key to get from the user profile\n
        conn: automatically handled by the pool manager"""
     try:
-        return await conn.fetch("SELECT $1 FROM users WHERE username = $2", value, username)
+        if not value.isidentifier():
+            raise ValueError("Invalid column name")
+
+        query = (
+            f"SELECT {_quote_ident(value)} "
+            f"FROM users WHERE username = $1"
+        )
+
+        return await conn.fetch(query, username)
     except Exception as e:
         print(f"db_get_value_from_user->Error: {e}")
         return None

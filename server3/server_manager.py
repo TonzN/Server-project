@@ -357,8 +357,9 @@ async def main():
                 print(f"{key:<15}: {value}")
 
         print("\nStarting server...")
-        await run_server()
     else:
         print("No messages found in the database. ")
+    
+    await run_server()
         
 asyncio.run(main())
