@@ -3,6 +3,8 @@ import group_manager
 from db_pool_manager import *
 from psycopg2.extensions import quote_ident  # tiny helper
 import server_utils as utils
+import re
+
 
 #temp cached data
 _online_users = {} # online users are stored here
@@ -29,9 +31,13 @@ whitelisted_tables = {
     "users", "messages", "groups", "rooms"
 }
 
-def _quote_ident(conn, ident: str) -> str:
-    """Quote an identifier for use in a SQL statement."""
-    return conn._con.quote_ident(ident) 
+def _quote_ident(ident: str) -> str:
+    """Validate and quote a PostgreSQL identifier."""
+
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", ident):
+        raise ValueError(f"Invalid SQL identifier: {ident}")
+
+    return f'"{ident}"'
 
 
 def with_db_connection(func):
@@ -316,10 +322,13 @@ async def db_create_table(conn, table_name: str, column_defs: dict[str, str]):
             raise ValueError(f"bad column name {col!r}")
         if col_type.split()[0].lower() not in SAFE_TYPES:
             raise ValueError(f"disallowed type {col_type!r}")
+    
+        cols_sql.append(f"{_quote_ident(col)} {col_type}")
 
-        cols_sql.append(f"{_quote_ident(conn, col)} {col_type}")
-
-    ddl = f"CREATE TABLE IF NOT EXISTS {_quote_ident(conn, table_name)} ({', '.join(cols_sql)})"
+    ddl = (
+        f"CREATE TABLE IF NOT EXISTS {_quote_ident(table_name)} "
+        f"({', '.join(cols_sql)})"
+    )
     await conn.execute(ddl)
 
 

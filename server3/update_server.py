@@ -43,10 +43,11 @@ if update_db:
         await update_users()
         
         messages = await database_manager.db_get_table("messages", limit=20, order_by="message_id", newest_first=True)
-        for msg in messages:
-            print("-" * 50)
-            for key, value in msg.items():
-                print(f"{key:<15}: {value}")
+        if messages:
+            for msg in messages:
+                print("-" * 50)
+                for key, value in msg.items():
+                    print(f"{key:<15}: {value}")
 
     asyncio.run(run_update())
 
