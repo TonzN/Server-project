@@ -22,7 +22,7 @@ server_pool = PoolManager()
 
 SAFE_TYPES = {
     "text", "varchar", "integer", "bigint", "timestamp",
-    "timestamptz", "boolean", "jsonb"
+    "timestamptz", "boolean", "jsonb", "varchar(200)", "varchar(100)", "varchar(50)", "varchar(20)", "varchar(10)"
 }
 
 whitelisted_tables = {
@@ -31,8 +31,7 @@ whitelisted_tables = {
 
 def _quote_ident(conn, ident: str) -> str:
     """Quote an identifier for use in a SQL statement."""
-    # asyncpg has no public helper, so grab the server's quoting rules
-    return conn._con.quote_ident(ident)  # or use psycopg2.quote_ident if available
+    return conn._con.quote_ident(ident) 
 
 
 def with_db_connection(func):
