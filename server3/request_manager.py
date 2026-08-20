@@ -49,7 +49,7 @@ def update_users_count(amount = 1):
     with open(config_path, "w") as file:
         json.dump(config, file, indent=4)  
 
-def join_room(recieving_username, token):
+def _join_room(recieving_username, token): #depricated
     """Adds a user to a room or creates a new room if it doesn't exist"""
     try:
         payload = get_user_profile(token)
@@ -109,22 +109,86 @@ def join_room(recieving_username, token):
         print(f"join_room->Error: {e}")
         return "join_room->error"
 
-def leave_room(msg, token):
-    """Removes a user from a room"""
-    payload = get_user_profile(token)
-    if payload:
-        if len(payload["rooms_joined"]) > 0:
-            old_key = payload["rooms_joined"][-1][0]
-            old_id = payload["rooms_joined"][-1][1]
-            delete_2user_room(None, None, old_id, old_key)  
-            print(f"User {payload['name']} left room {old_key} with ID {old_id}")
-            payload["subscribed_room"] = None
-            payload["rooms_joined"].pop()
-            return "leave_room->success"
+def join_room(receiving_username, token):
+    """Join or create a DM room between two users."""
+
+    try:
+        payload = get_user_profile(token)
+
+        if not payload:
+            return "join_room->invalid token"
+
+        sending_username = payload["name"]
+
+        # hvis request fortsatt sender liste
+        receiving_username = receiving_username[0]
+
+        if sending_username == receiving_username:
+            return "join_room->cannot chat with yourself"
+
+        # sjekk at bruker finnes
+        if not get_user(receiving_username):
+            return "join_room->user not found"
+
+        # unik nøkkel for disse to brukerne
+        room_key = tuple(sorted([
+            sending_username,
+            receiving_username
+        ]))
+
+        # finnes rommet allerede?
+        if get_2user_room(room_key):
+
+            room_id = get_2user_room(room_key)
+
+            print(
+                f"Existing room found between "
+                f"{sending_username} and {receiving_username}"
+            )
+
         else:
-            return "leave_room->no rooms joined"
-    else:
+            # lag nytt rom
+            room_id = create_2user_room(sending_username, receiving_username)
+            print(
+                f"Created room between "
+                f"{sending_username} and {receiving_username}"
+            )
+
+        # bytt brukerens aktive rom
+        payload["subscribed_room"] = room_id
+
+        return {
+            "status": "success",
+            "room_id": room_id
+        }
+
+    except Exception as e:
+
+        print(f"join_room->Error: {e}")
+
+        return "join_room->error"
+    
+def leave_room(msg, token):
+
+    payload = get_user_profile(token)
+
+    if not payload:
         return "leave_room->invalid token"
+
+    room_id = payload.get("subscribed_room")
+
+    if not room_id:
+        return "leave_room->no room joined"
+
+    username = payload["name"]
+
+    leave_2user_room(username, room_id)
+
+    payload["subscribed_room"] = None
+
+    print(f"{username} left room {room_id}")
+
+    return "leave_room->success"
 
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
     """Updates the heartbeat time of the user to maintain status health"""

@@ -75,19 +75,36 @@ def wait_for(function, max_wait=5, *args, **kwargs):
 #Room management
 
 def join_2user_room(user, room_id):
-    """Adds a user to a 2 user room if they have been invited"""
+    """Mark user as active in an existing room."""
+
     room = get_2user_room(room_id)
-    if room:
-        if user not in room["users"] and user in room["invited"]:
-            room["users"].append(user)
-            room["invited"].remove(user)
-            return True
-        else:
-            print(f"join_2user_room->Error: User {user} is already in the room or not invited")
-            return False
-    else:
+
+    if not room:
         print(f"join_2user_room->Error: Room {room_id} not found")
         return False
+
+    if user not in room["users"]:
+        print(
+            f"join_2user_room->Error: "
+            f"User {user} does not belong to room {room_id}"
+        )
+        return False
+
+    room["active_users"].add(user)
+
+    return True
+
+def leave_2user_room(user, room_id):
+    """Mark a user as no longer active in a room."""
+
+    room = get_2user_room(room_id)
+
+    if not room:
+        return False
+
+    room["active_users"].discard(user)
+
+    return True
 
 def get_2user_room(room_id):
     if debug_room:
@@ -114,26 +131,38 @@ def create_2user_room(sender, receiver):
         if key not in _user_room2:
             room_id = str(utils.get_random_room_id())
             _user_room2[key] = room_id
-            _rooms[room_id] = {"users": [sender], "invited": [receiver]} #initially only the sender is in the room
+            _rooms[room_id] = {"users": [sender, receiver], "active": [sender]} #initially only the sender is in the room
            # print("All rooms", _rooms)
             return "created", room_id
         else:
+            room_id = _user_room2[key]
             print("Room already exists for these users")
+            # Hvis rommet finnes, sørg for at sender er aktiv
+            _rooms[room_id]["active"].add(sender)
             return "found", _user_room2[key]
     except Exception as e:
         print(f"create_2user_room->Error: {e}")
         return None
 
-def switch2_user_room(senderprofile, new_room_id, old_room_id, sender, receiver):
+def switch2_user_room(senderprofile, new_room_id):
+
     try:
-    #    print(senderprofile)
-        if "subscribed_room" in senderprofile: 
-            if old_room_id in _rooms:
-                delete_2user_room(sender, receiver, old_room_id)  # delete old room
-                del _rooms[old_room_id]  # remove old room from the rooms list
-            senderprofile["subscribed_room"] = new_room_id
-        else:
-            print("switch2_user_room->Error: senderprofile does not have subscribed_room variable.\nServer profile is incomplete")
+        username = senderprofile["name"]
+
+        old_room_id = senderprofile.get("subscribed_room")
+
+        # Leave old room
+        if old_room_id:
+            leave_2user_room(username, old_room_id)
+
+        # Join new room
+        if not join_2user_room(username, new_room_id):
+            return False
+
+        senderprofile["subscribed_room"] = new_room_id
+
+        return True
+
     except Exception as e:
         print(f"switch2_user_room->Error: {e}")
         return False
@@ -185,6 +214,8 @@ def get_2user_room_id(sender, receiver):
         print(f"Could not get 2 user room {e}")
         return None
 
+def get_dm_key(user1, user2):
+    return tuple(sorted([user1, user2]))
 
 #quick lookup for cached data
 #--------------------------------------#
