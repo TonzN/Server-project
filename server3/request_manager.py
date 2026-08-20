@@ -120,26 +120,22 @@ def join_room(receiving_username, token):
 
         sending_username = payload["name"]
 
-        # hvis request fortsatt sender liste
+        # Hvis request sender liste
         receiving_username = receiving_username[0]
 
         if sending_username == receiving_username:
             return "join_room->cannot chat with yourself"
 
-        # sjekk at bruker finnes
         if not get_user(receiving_username):
             return "join_room->user not found"
 
-        # unik nøkkel for disse to brukerne
-        room_key = tuple(sorted([
+        # Finn eksisterende room_id
+        status, room_id = get_2user_room_id(
             sending_username,
             receiving_username
-        ]))
+        )
 
-        # finnes rommet allerede?
-        if get_2user_room(room_key):
-
-            room_id = get_2user_room(room_key)
+        if room_id:
 
             print(
                 f"Existing room found between "
@@ -147,15 +143,23 @@ def join_room(receiving_username, token):
             )
 
         else:
-            # lag nytt rom
-            room_id = create_2user_room(sending_username, receiving_username)
+
+            status, room_id = create_2user_room(
+                sending_username,
+                receiving_username
+            )
+
+            if not room_id:
+                return "join_room->could not create room"
+
             print(
                 f"Created room between "
                 f"{sending_username} and {receiving_username}"
             )
 
-        # bytt brukerens aktive rom
-        payload["subscribed_room"] = room_id
+        # Bytt aktivt rom
+        if not switch2_user_room(payload, room_id):
+            return "join_room->could not switch room"
 
         return {
             "status": "success",
@@ -167,7 +171,7 @@ def join_room(receiving_username, token):
         print(f"join_room->Error: {e}")
 
         return "join_room->error"
-    
+
 def leave_room(msg, token):
 
     payload = get_user_profile(token)

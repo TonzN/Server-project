@@ -80,14 +80,20 @@ def join_2user_room(user, room_id):
     room = get_2user_room(room_id)
 
     if not room:
-        print(f"join_2user_room->Error: Room {room_id} not found")
+        print(
+            f"join_2user_room->Error: "
+            f"Room {room_id} not found"
+        )
+
         return False
 
     if user not in room["users"]:
+
         print(
             f"join_2user_room->Error: "
             f"User {user} does not belong to room {room_id}"
         )
+
         return False
 
     room["active_users"].add(user)
@@ -124,39 +130,61 @@ def get_2user_room(room_id):
         return None
 
 def create_2user_room(sender, receiver):
-    """Creates room for users subscribed to the same room""" 
+
     try:
-        sorted_users = sorted([sender, receiver])
-        key = str(sorted_users)
-        if key not in _user_room2:
+
+        room_key = get_dm_key(sender, receiver)
+
+        if room_key not in _user_room2:
+
             room_id = str(utils.get_random_room_id())
-            _user_room2[key] = room_id
-            _rooms[room_id] = {"users": [sender, receiver], "active": [sender]} #initially only the sender is in the room
-           # print("All rooms", _rooms)
+
+            _user_room2[room_key] = room_id
+
+            _rooms[room_id] = {
+                "users": [sender, receiver],
+                "active_users": {sender}
+            }
+
             return "created", room_id
+
         else:
-            room_id = _user_room2[key]
+
+            room_id = _user_room2[room_key]
+
             print("Room already exists for these users")
-            # Hvis rommet finnes, sørg for at sender er aktiv
-            _rooms[room_id]["active"].add(sender)
-            return "found", _user_room2[key]
+
+            _rooms[room_id]["active_users"].add(sender)
+
+            return "found", room_id
+
     except Exception as e:
+
         print(f"create_2user_room->Error: {e}")
-        return None
+
+        return "error", None
 
 def switch2_user_room(senderprofile, new_room_id):
 
     try:
+
         username = senderprofile["name"]
 
         old_room_id = senderprofile.get("subscribed_room")
 
-        # Leave old room
-        if old_room_id:
-            leave_2user_room(username, old_room_id)
+        # Leave previous active room
+        if old_room_id and old_room_id != new_room_id:
+
+            leave_2user_room(
+                username,
+                old_room_id
+            )
 
         # Join new room
-        if not join_2user_room(username, new_room_id):
+        if not join_2user_room(
+            username,
+            new_room_id
+        ):
             return False
 
         senderprofile["subscribed_room"] = new_room_id
@@ -164,7 +192,9 @@ def switch2_user_room(senderprofile, new_room_id):
         return True
 
     except Exception as e:
+
         print(f"switch2_user_room->Error: {e}")
+
         return False
 
 def exit_2user_room(senderprofile, sender, receiver, id=None):
