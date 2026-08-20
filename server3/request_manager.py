@@ -109,6 +109,23 @@ def join_room(recieving_username, token):
         print(f"join_room->Error: {e}")
         return "join_room->error"
 
+def leave_room(msg, token):
+    """Removes a user from a room"""
+    payload = get_user_profile(token)
+    if payload:
+        if len(payload["rooms_joined"]) > 0:
+            old_key = payload["rooms_joined"][-1][0]
+            old_id = payload["rooms_joined"][-1][1]
+            delete_2user_room(None, None, old_id, old_key)  
+            print(f"User {payload['name']} left room {old_key} with ID {old_id}")
+            payload["subscribed_room"] = None
+            payload["rooms_joined"].pop()
+            return "leave_room->success"
+        else:
+            return "leave_room->no rooms joined"
+    else:
+        return "leave_room->invalid token"
+
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
     """Updates the heartbeat time of the user to maintain status health"""
     """Returns "pong" if the user is online and the heartbeat time is updated"""

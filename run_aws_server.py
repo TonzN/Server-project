@@ -10,4 +10,5 @@ subprocess.run([
     "cmd",
     "/k",
     f'ssh -i "{key}" administrator@85.190.97.54'
-])
+])                                      
+

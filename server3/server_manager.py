@@ -333,7 +333,7 @@ async def run_server():
     """Starts the WebSocket server on a unique port."""
     port = PORT 
     server = await websockets.serve(client_handler, HOST, port, ping_interval=None, )
-    print(f"WebSocket Server running on ws://{HOST}:{port} ")
+    print(f"WebSocket Server running on wss://{HOST}:{port} ")
     
     await server.wait_closed()  # Keeps the server running
 
