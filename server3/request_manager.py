@@ -130,7 +130,7 @@ def join_room(receiving_username, token):
             return "join_room->user not found"
 
         # Finn eksisterende room_id
-        status, room_id = get_2user_room_id(
+        room_id = get_2user_room_id(
             sending_username,
             receiving_username
         )
