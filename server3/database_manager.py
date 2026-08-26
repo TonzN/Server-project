@@ -101,11 +101,15 @@ def join_2user_room(user, room_id):
     return True
 
 def leave_2user_room(user, room_id):
-    """Mark a user as no longer active in a room."""
+    """Mark user as inactive without deleting the room."""
 
     room = get_2user_room(room_id)
 
     if not room:
+        print(
+            f"leave_2user_room->Error: "
+            f"Room {room_id} not found"
+        )
         return False
 
     room["active_users"].discard(user)

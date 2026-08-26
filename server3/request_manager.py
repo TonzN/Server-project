@@ -132,21 +132,38 @@ def join_2user_room(user, room_id):
 
     return True
 
-def leave_2user_room(user, room_id):
-    """Mark user as inactive without deleting the room."""
+def leave_room(msg, token):
+    """Leave the current room without deleting it."""
 
-    room = get_2user_room(room_id)
+    try:
+        payload = get_user_profile(token)
 
-    if not room:
+        if not payload:
+            return "leave_room->invalid token"
+
+        room_id = payload.get("subscribed_room")
+
+        if not room_id:
+            return "leave_room->no room joined"
+
+        username = payload["name"]
+
+        # Remove user from active users
+        if not leave_2user_room(username, room_id):
+            return "leave_room->failed"
+
+        # User is no longer subscribed to this room
+        payload["subscribed_room"] = None
+
         print(
-            f"leave_2user_room->Error: "
-            f"Room {room_id} not found"
+            f"{username} left room {room_id}"
         )
-        return False
 
-    room["active_users"].discard(user)
+        return "leave_room->success"
 
-    return True
+    except Exception as e:
+        print(f"leave_room->Error: {e}")
+        return "leave_room->error"
 
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
     """Updates the heartbeat time of the user to maintain status health"""
