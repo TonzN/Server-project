@@ -130,40 +130,50 @@ def get_2user_room(room_id):
         return None
 
 def create_2user_room(sender, receiver):
-
     try:
-
         room_key = get_dm_key(sender, receiver)
 
-        if room_key not in _user_room2:
-
-            room_id = str(utils.get_random_room_id())
-
-            _user_room2[room_key] = room_id
-
-            _rooms[room_id] = {
-                "users": [sender, receiver],
-                "active_users": {sender}
-            }
-
-            return "created", room_id
-
-        else:
+        if room_key in _user_room2:
 
             room_id = _user_room2[room_key]
 
-            print("Room already exists for these users")
+            # Mapping finnes, men rommet mangler
+            if room_id not in _rooms:
+
+                print(
+                    f"Room mapping existed but room {room_id} "
+                    f"was missing. Recreating."
+                )
+
+                _rooms[room_id] = {
+                    "users": [sender, receiver],
+                    "active_users": {sender}
+                }
+
+                return "created", room_id
 
             _rooms[room_id]["active_users"].add(sender)
 
             return "found", room_id
+
+        # Ingen mapping -> nytt rom
+        room_id = str(utils.get_random_room_id())
+
+        _user_room2[room_key] = room_id
+
+        _rooms[room_id] = {
+            "users": [sender, receiver],
+            "active_users": {sender}
+        }
+
+        return "created", room_id
 
     except Exception as e:
 
         print(f"create_2user_room->Error: {e}")
 
         return "error", None
-
+    
 def switch2_user_room(senderprofile, new_room_id):
 
     try:

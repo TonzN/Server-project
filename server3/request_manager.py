@@ -150,7 +150,7 @@ def join_room(receiving_username, token):
             )
 
             if not room_id:
-                return "join_room->could not create room"
+                return "join_room->failed to create/find room"
 
             print(
                 f"Created room between "
