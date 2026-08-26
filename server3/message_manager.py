@@ -150,14 +150,12 @@ async def message_group(data, token):
         print(f"message_group->could not recieve or send back to group or error with provided data {e}")
         return "message_group->Did not send message"
     
-
 def _auto_group(profile, data):
     """Automatically add a user to a group when they join a room.
     if the group does not exist, create it.
     Returns group or channel id"""
     sending_username = profile["name"]
     recieving_username = data[0]
-
 
 #legacy code
 async def old_message_user(data, token):
