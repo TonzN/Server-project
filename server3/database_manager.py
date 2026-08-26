@@ -74,6 +74,7 @@ def wait_for(function, max_wait=5, *args, **kwargs):
 #--------------------------------------#
 #Room management
 
+
 def join_2user_room(user, room_id):
     """Mark user as active in an existing room."""
 
