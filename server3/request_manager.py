@@ -109,7 +109,7 @@ def _join_room(recieving_username, token): #depricated
         print(f"join_room->Error: {e}")
         return "join_room->error"
 
-def join_2user_room(user, room_id):
+def join_room(user, room_id):
     """Mark user as active in an existing room."""
 
     room = get_2user_room(room_id)
