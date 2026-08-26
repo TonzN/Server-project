@@ -110,7 +110,7 @@ def _join_room(recieving_username, token): #depricated
         return "join_room->error"
 
 def join_room(receiving_username, token):
-    """Join or create a DM room between two users."""
+    """Join or create a persistent DM room between two users."""
 
     try:
         payload = get_user_profile(token)
@@ -118,48 +118,46 @@ def join_room(receiving_username, token):
         if not payload:
             return "join_room->invalid token"
 
-        sending_username = payload["name"]
-
-        # Hvis request sender liste
+        # Request currently sends username as a list
         receiving_username = receiving_username[0]
+
+        sending_username = payload["name"]
 
         if sending_username == receiving_username:
             return "join_room->cannot chat with yourself"
 
+        # Make sure receiving user exists
         if not get_user(receiving_username):
             return "join_room->user not found"
 
-        # Finn eksisterende room_id
+        # Find existing room
         room_id = get_2user_room_id(
             sending_username,
             receiving_username
         )
 
-        if room_id:
+        # No room exists -> create it
+        if room_id is None:
 
-            print(
-                f"Existing room found between "
-                f"{sending_username} and {receiving_username}"
-            )
-
-        else:
-
-            status, room_id = create_2user_room(
+            result = create_2user_room(
                 sending_username,
                 receiving_username
             )
 
-            if not room_id:
-                return "join_room->failed to create/find room"
+            if not result:
+                return "join_room->failed to create room"
 
-            print(
-                f"Created room between "
-                f"{sending_username} and {receiving_username}"
-            )
+            status, room_id = result
 
-        # Bytt aktivt rom
+        # Switch from current room to the DM room
         if not switch2_user_room(payload, room_id):
-            return "join_room->could not switch room"
+            return "join_room->failed to switch room"
+
+        print(
+            f"{sending_username} joined DM with "
+            f"{receiving_username} "
+            f"(room {room_id})"
+        )
 
         return {
             "status": "success",
@@ -167,32 +165,41 @@ def join_room(receiving_username, token):
         }
 
     except Exception as e:
-
         print(f"join_room->Error: {e}")
-
         return "join_room->error"
 
 def leave_room(msg, token):
+    """Leave the current room without deleting it."""
 
-    payload = get_user_profile(token)
+    try:
+        payload = get_user_profile(token)
 
-    if not payload:
-        return "leave_room->invalid token"
+        if not payload:
+            return "leave_room->invalid token"
 
-    room_id = payload.get("subscribed_room")
+        room_id = payload.get("subscribed_room")
 
-    if not room_id:
-        return "leave_room->no room joined"
+        if not room_id:
+            return "leave_room->no room joined"
 
-    username = payload["name"]
+        username = payload["name"]
 
-    leave_2user_room(username, room_id)
+        # Remove user from active users
+        if not leave_2user_room(username, room_id):
+            return "leave_room->failed"
 
-    payload["subscribed_room"] = None
+        # User is no longer subscribed to this room
+        payload["subscribed_room"] = None
 
-    print(f"{username} left room {room_id}")
+        print(
+            f"{username} left room {room_id}"
+        )
 
-    return "leave_room->success"
+        return "leave_room->success"
+
+    except Exception as e:
+        print(f"leave_room->Error: {e}")
+        return "leave_room->error"
 
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
     """Updates the heartbeat time of the user to maintain status health"""

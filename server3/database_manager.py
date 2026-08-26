@@ -130,49 +130,46 @@ def get_2user_room(room_id):
         return None
 
 def create_2user_room(sender, receiver):
+    """Create a persistent 2-user DM room if it does not already exist."""
+
     try:
-        room_key = get_dm_key(sender, receiver)
+        key = str(sorted([sender, receiver]))
 
-        if room_key in _user_room2:
+        # Room already exists
+        if key in _user_room2:
+            room_id = _user_room2[key]
 
-            room_id = _user_room2[room_key]
-
-            # Mapping finnes, men rommet mangler
-            if room_id not in _rooms:
-
+            # Make sure the room still exists
+            if room_id in _rooms:
                 print(
-                    f"Room mapping existed but room {room_id} "
-                    f"was missing. Recreating."
+                    f"Room already exists between "
+                    f"{sender} and {receiver}"
                 )
+                return "found", room_id
 
-                _rooms[room_id] = {
-                    "users": [sender, receiver],
-                    "active_users": {sender}
-                }
+            # Mapping exists but room itself is gone
+            del _user_room2[key]
 
-                return "created", room_id
-
-            _rooms[room_id]["active_users"].add(sender)
-
-            return "found", room_id
-
-        # Ingen mapping -> nytt rom
+        # Create new room
         room_id = str(utils.get_random_room_id())
 
-        _user_room2[room_key] = room_id
+        _user_room2[key] = room_id
 
         _rooms[room_id] = {
             "users": [sender, receiver],
-            "active_users": {sender}
+            "active": {sender}
         }
+
+        print(
+            f"Created room between {sender} and {receiver} "
+            f"with ID {room_id}"
+        )
 
         return "created", room_id
 
     except Exception as e:
-
         print(f"create_2user_room->Error: {e}")
-
-        return "error", None
+        return None
     
 def switch2_user_room(senderprofile, new_room_id):
 
