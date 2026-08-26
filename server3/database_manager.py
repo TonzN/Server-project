@@ -84,16 +84,13 @@ def join_2user_room(user, room_id):
             f"join_2user_room->Error: "
             f"Room {room_id} not found"
         )
-
         return False
 
     if user not in room["users"]:
-
         print(
             f"join_2user_room->Error: "
             f"User {user} does not belong to room {room_id}"
         )
-
         return False
 
     room["active_users"].add(user)

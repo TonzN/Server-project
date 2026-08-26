@@ -109,28 +109,64 @@ def _join_room(recieving_username, token): #depricated
         print(f"join_room->Error: {e}")
         return "join_room->error"
 
-def join_room(user, room_id):
-    """Mark user as active in an existing room."""
+def join_room(receiving_username, token):
+    """Join or create a persistent DM room between two users."""
 
-    room = get_2user_room(room_id)
+    try:
+        payload = get_user_profile(token)
 
-    if not room:
-        print(
-            f"join_2user_room->Error: "
-            f"Room {room_id} not found"
+        if not payload:
+            return "join_room->invalid token"
+
+        # Request currently sends username as a list
+        receiving_username = receiving_username[0]
+
+        sending_username = payload["name"]
+
+        if sending_username == receiving_username:
+            return "join_room->cannot chat with yourself"
+
+        # Make sure receiving user exists
+        if not get_user(receiving_username):
+            return "join_room->user not found"
+
+        # Find existing room
+        room_id = get_2user_room_id(
+            sending_username,
+            receiving_username
         )
-        return False
 
-    if user not in room["users"]:
+        # No room exists -> create it
+        if room_id is None:
+
+            result = create_2user_room(
+                sending_username,
+                receiving_username
+            )
+
+            if not result:
+                return "join_room->failed to create room"
+
+            status, room_id = result
+
+        # Switch from current room to the DM room
+        if not switch2_user_room(payload, room_id):
+            return "join_room->failed to switch room"
+
         print(
-            f"join_2user_room->Error: "
-            f"User {user} does not belong to room {room_id}"
+            f"{sending_username} joined DM with "
+            f"{receiving_username} "
+            f"(room {room_id})"
         )
-        return False
 
-    room["active_users"].add(user)
+        return {
+            "status": "success",
+            "room_id": room_id
+        }
 
-    return True
+    except Exception as e:
+        print(f"join_room->Error: {e}")
+        return "join_room->error"
 
 def leave_room(msg, token):
     """Leave the current room without deleting it."""
