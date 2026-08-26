@@ -130,24 +130,28 @@ def get_2user_room(room_id):
         return None
 
 def create_2user_room(sender, receiver):
-    """Create a persistent 2-user DM room if it does not already exist."""
+    """Creates or returns a persistent 2-user room."""
 
     try:
-        key = str(sorted([sender, receiver]))
+        sorted_users = sorted([sender, receiver])
+        key = str(sorted_users)
 
         # Room already exists
         if key in _user_room2:
             room_id = _user_room2[key]
 
-            # Make sure the room still exists
             if room_id in _rooms:
                 print(
                     f"Room already exists between "
                     f"{sender} and {receiver}"
                 )
+
+                # Sender becomes active in the existing room
+                _rooms[room_id]["active_users"].add(sender)
+
                 return "found", room_id
 
-            # Mapping exists but room itself is gone
+            # Mapping exists but room is gone
             del _user_room2[key]
 
         # Create new room
@@ -157,7 +161,7 @@ def create_2user_room(sender, receiver):
 
         _rooms[room_id] = {
             "users": [sender, receiver],
-            "active": {sender}
+            "active_users": {sender}
         }
 
         print(
