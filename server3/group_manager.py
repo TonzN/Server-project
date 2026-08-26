@@ -22,7 +22,7 @@ def automated_room_asignment(senderprofile, sender, reciever, message_type, id=N
         if message_type == "dm": #asign sender/reciever users to a 2 user room
             room_id = senderprofile["subscribed_room"]
             if room_id:
-                return db.get_2user_room(room_id)["users"]
+                return db.get_2user_room(room_id)["active_users"]
             else:
                 print(f"automated_room_asignment->No room found for users {sender} and {reciever}")
                 return 
