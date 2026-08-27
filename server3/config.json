@@ -1,5 +1,5 @@
 {
-    "HOST": "0.0.0.0",
+    "HOST": "127.0.0.1",
     "PORT": 8765,
     "run_server": true,
     "user_capacity": 100,

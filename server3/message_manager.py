@@ -199,7 +199,6 @@ async def old_message_user(data, token):
         print(f"message_user->could not recieve or send back to client or error with provided data {e}")
         return "message_user->Did not send message"
 
-
 #---------------------mix----------------------------
 async def pull_all_chat_history(data, token):
     """Pull all chat history from the database.
