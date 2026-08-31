@@ -5,13 +5,29 @@ from client.thread_manager import *
 from  client.client_utils import *
 import websockets
 
-HOST = "wss://wss.vocatus.no/ws/" # The server's hostname or IP address
-PORT = 12345  # The port used by the server
+PORT = 8765  # The port used by the server
+HOST = f"wss://vps-5510.onecom-cloud.one/ws" # The server's hostname or IP address
 ENTER = 16777220
 
 class RemoteSignal(QThread):
     signal = pyqtSignal(dict)
 
+def connect_signal(name, slot_function, expected_type):
+    """
+    Oppretter et RemoteSignal, registrerer det i client.signals under 'name',
+    og kobler det til slot_function.
+
+    Bruk denne i __init__ på en widget når den skal abonnere på data
+    som klient-tråden dispatcher via full_pull_queue.
+
+    Returnerer RemoteSignal-objektet - behold referansen på self hvis widgeten
+    skal leve videre (unngår garbage collection av signalet).
+    """
+    remote_signal = RemoteSignal()
+    client.signals[name] = [remote_signal.signal, expected_type]
+    remote_signal.signal.connect(slot_function)
+    return remote_signal
+  
 class Client_thread(QThread):
     """
     A class to manage the client thread for a messaging application.
@@ -149,8 +165,6 @@ class Chat(QWidget):
                         msg = client.gen_message("message_user", [user, message], "chat", config["token"])
                         client.cross_comminication_queues["chat_message"].put_nowait(msg)
                         client.receieve_events["send_message"].set()
-                        room_subscribe = client.gen_message("join_room", [user], "main", config["token"])
-                        client.cross_comminication_queues["main"].put_nowait(room_subscribe)
                         self.input_field.clear()
                     else:
                         print("invalid text or no selected user to dm")
@@ -178,7 +192,7 @@ class Chat(QWidget):
 
         elif type(message) == list: #multiple messages
             for i in range(len(message)):
-                item_text = f"{message[i]["sender"]}: {message[i]["message"]}"
+                item_text = f"{message[i]['sender']}: {message[i]['message']}"
                 item = QListWidgetItem(item_text)
                 self.chat_list.addItem(item)
                 self.chat_list.scrollToBottom()
@@ -187,67 +201,163 @@ class DropDownMenu(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("drop down menu")
+        #layouts
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.selection_layout = QHBoxLayout()
+        self.selection_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.drop_down_layout = QVBoxLayout()
+        self.drop_down_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
         self.online_users = {}
         self.current_chat = None
         self.refresh_signal = RemoteSignal()
-        self.refresh_signal.signal.connect(self.refresh)
         self.associate_chat = None
+        self.selected_dropdown = None
         client.signals["refresh_menu_panel"] = [self.refresh_signal.signal, dict]
+        
+        self.menu_group = QButtonGroup(self)
+        
+        #widgets
         self.refresh_button = QPushButton("Refresh")
-        # self.main_layout.addWidget(self.refresh_button)
-        create_group = QPushButton("Global chat")
-        create_group.clicked.connect(self.select_group)
-        self.main_layout.addWidget(create_group)
-        users_label = QLabel("Users")
-        self.main_layout.addWidget(users_label)
+        #self.main_layout.addWidget(self.refresh_button)
+        create_group = QPushButton("Groups")
+        users_button = QPushButton("Users")
+        global_chat = QPushButton("Global Chat")
 
+        #add widgets to layout
+        self.selection_layout.addWidget(create_group)
+        self.selection_layout.addWidget(users_button)
+        self.selection_layout.addWidget(global_chat)
+        self.selection_layout.addStretch()
+        
+        #layouts
+        self.main_layout.addLayout(self.selection_layout)
+        self.main_layout.addLayout(self.drop_down_layout)
+        
+        for button in [create_group, users_button, global_chat]:
+            button.setCheckable(True)
+        self.menu_group.setExclusive(True)
+        self.menu_group.addButton(create_group)
+        self.menu_group.addButton(users_button)
+        self.menu_group.addButton(global_chat)
+        
+        
+        style = """
+        QPushButton {
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 15px;
+        }
+
+        QPushButton:hover {
+            background-color: #444;
+        }
+
+        QPushButton:checked {
+            background-color: #0078D4;
+        }
+        """
+
+        for button in [create_group, users_button, global_chat]:
+            button.setStyleSheet(style)
+                        
+        
+        #connections
+        self.refresh_signal.signal.connect(self.refresh_users)
+        create_group.clicked.connect(self.select_group_dropdown)
+        users_button.clicked.connect(self.select_user_dropdown)
+        global_chat.clicked.connect(self.select_global_chat)
         self.refresh_button.clicked.connect(request_online_users)
         client.heartbeat_functions["req_online_users"] = request_online_users
 
-    def select_group(self):
-        if self.current_chat != "global": #prevent multiple reloads of the same chat
+    def select_global_chat(self):
+        if self.current_chat != "global" and self.selected_dropdown != "global": #prevent multiple reloads of the same chat
+            self.clear_drop_down()
             self.current_chat = "global"
+            self.selected_dropdown = "global"
+            self.online_users.clear()
             config["send_type"] = "group"
             config["selected_group"] = "global"
+            msg = client.gen_message("leave_room", "[]", "main", config["token"])
+            client.cross_comminication_queues["main"].put_nowait(msg)
             if self.associate_chat:
                 self.associate_chat.clear_messages()
                 user = "global"
                 msg = client.gen_message("pull_all_chat_history", [], "chat", config["token"])
                 client.cross_comminication_queues["main"].put_nowait(msg)
                 client.receieve_events["main"].set()
+    
+    def clear_drop_down(self):
+        """Removes all widgets from the drop down layout."""
+        if self.drop_down_layout:
+            while self.drop_down_layout.count():
+                item = self.drop_down_layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+    
+    def create_group(self):
+        pass
+        
+    def select_group_dropdown(self):
+        if self.selected_dropdown != "groups":
+            self.selected_dropdown = "groups"
+            self.clear_drop_down()
+            self.online_users.clear()
+            self.current_chat = None
+            msg = client.gen_message("leave_room", "[]", "main", config["token"])
+            client.cross_comminication_queues["main"].put_nowait(msg)
+            if self.associate_chat:
+                self.associate_chat.clear_messages()
+            
+            self.create_group_button = QPushButton("Create Group")
+            self.drop_down_layout.addWidget(self.create_group_button)
+            self.create_group_button.clicked.connect(self.create_group)
+            
+    def select_user_dropdown(self):
+        if self.selected_dropdown != "users":
+            self.selected_dropdown = "users"
+            self.clear_drop_down()
+            self.current_chat = None
+            self.online_users.clear()
+            if self.associate_chat:
+                self.associate_chat.clear_messages()
+        
+    def refresh_users(self, data):
+        if self.selected_dropdown == "users":
+            users = data["data"]
+            for user in users: #adds labels of users
+                if user != config["username"] and user not in self.online_users:
+                    online_user = QPushButton(user)
+                    self.drop_down_layout.addWidget(online_user)
+                    online_user.setProperty("user", user)
+                    online_user.clicked.connect(self.select_user)
+                    self.online_users[user] = online_user   
 
-    def refresh(self, data):
-        users = data["data"]
-        for user in users: #adds labels of users
-            if user != config["username"] and user not in self.online_users:
-                online_user = QPushButton(user)
-                self.main_layout.addWidget(online_user)
-                online_user.setProperty("user", user)
-                online_user.clicked.connect(self.select_user)
-                self.online_users[user] = online_user   
+            remove_user = []
+            for user in self.online_users: #removes 
+                if user not in users and self.online_users[user] != None:
+                    self.online_users[user] .deleteLater()
+                    remove_user.append(user)
 
-        remove_user = []
-        for user in self.online_users: #removes 
-            if user not in users and self.online_users[user] != None:
-                self.online_users[user] .deleteLater()
-                remove_user.append(user)
-
-        for user in remove_user:
-            del self.online_users[user]
+            for user in remove_user:
+                del self.online_users[user]
 
     def select_user(self):
         button = self.sender()
         if self.current_chat != button.property("user"): #prevent multiple reloads of the same user
             config["send_type"] = "user"
-            config["selected_group"] == False
+            config["selected_group"] = False
             config["selected_user"] = button.property("user")
             if self.associate_chat :
                 self.associate_chat.clear_messages()
                 user = config["selected_user"] 
                 msg = client.gen_message("pull_user_chat_history_to_user", [user], "chat", config["token"])
-                msg_join_room = client.gen_message("join_room", [user], "main", config["token"])
+                room_subscribe = client.gen_message("join_room", [user], "main", config["token"])
+                client.cross_comminication_queues["main"].put_nowait(room_subscribe)
                 client.cross_comminication_queues["main"].put_nowait(msg)
                 client.receieve_events["main"].set()
                 self.current_chat = user

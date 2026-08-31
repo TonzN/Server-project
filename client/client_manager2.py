@@ -101,10 +101,9 @@ async def receive_from_server(client_sock, wait_for=2, expected_tag=None, supres
         msg = json.loads(message)
         content = msg["data"][0]
         tag = msg["data"][1]
-      #  if tag == "chat":
-         #   print(msg)
+        if  "main":
+            print(msg)
         add_to_response_log(content)
-
 
         try:
             if tag in receieve_queue:
@@ -134,7 +133,7 @@ def full_pull_queue(_queue, timeout=0.1):
                         if recieved["signal"] in signals:  
                             try:
                                 if "data" in recieved:
-                                    if type(recieved["data"]) == signals[recieved["signal"]][1]: #received content package
+                                    if type(recieved["data"]) == signals[recieved["signal"]][1]: #received content packageW
                                         signals[recieved["signal"]][0].emit(recieved["data"])       
                                 elif type(recieved) == signals[recieved["signal"]][1]: #received datapackage
                                     signals[recieved["signal"]][0].emit(recieved)
