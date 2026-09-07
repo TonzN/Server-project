@@ -122,7 +122,8 @@ def join_group_chat(group_name, token):
         
         if current_room and current_room != group_chat.name: # If the user is already in a room and it's not the group chat they want to join, leave the current room first
             leave_room(payload, token)  # Leave current room before joining a new one incase the user is already in a room
-
+            leave_group_chat(current_room, token)  # Leave current group chat if the user is already in one
+            
         if not group_chat:
             return f"join_group_chat->group chat not found {group_name}"
 
@@ -147,6 +148,7 @@ def join_room(receiving_username, token):
         if not payload:
             return "join_room->invalid token"
 
+        print(leave_group_chat(payload.get("subscribed_room"), token))  # Leave current group chat if the user is already in one
         # Request currently sends username as a list
         receiving_username = receiving_username[0]
 
@@ -197,7 +199,7 @@ def join_room(receiving_username, token):
         print(f"join_room->Error: {e}")
         return "join_room->error"
 
-def leave_room(msg, token, group =False):
+def leave_room(msg, token):
     """Leave the current room without deleting it."""
 
     try:
@@ -214,15 +216,9 @@ def leave_room(msg, token, group =False):
         username = payload["name"]
 
         # Remove user from active users
-        if not group:
-            if not leave_2user_room(username, room_id):
-                return "leave_room->failed"
-        else:
-            group_chat = get_group(room_id)
-            if not group_chat:
-                return "leave_room->group chat not found"
-            if not group_chat.remove_user(username):
-                return "leave_room->user not in group chat"
+        if not leave_2user_room(username, room_id):
+            return "leave_room->failed"
+
             
         # User is no longer subscribed to this room
         payload["subscribed_room"] = None
@@ -257,6 +253,7 @@ def leave_group_chat(group_name, token):
         if not group_chat.remove_user(username):
             return "leave_group_chat->user not in group chat"
 
+        payload["subscribed_room"] = None  # Update the user's subscribed room to None
         print(f"{username} left group chat {group_name}")
         return "leave_group_chat->success"
 
