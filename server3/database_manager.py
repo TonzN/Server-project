@@ -124,7 +124,6 @@ def get_2user_room(room_id):
             except Exception as e:                                    
                 print(f"{e}")
 
-    print("\n")
     if room_id in _rooms:
         return _rooms[room_id]
     else:
