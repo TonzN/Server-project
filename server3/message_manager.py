@@ -137,9 +137,9 @@ async def message_group(data, token):
                         response = json.dumps({"data": [{"user": "[global]"+profile["name"], "message": msg, "signal": "chat"}, "chat", ],  "signals": "chat"}) + "\n"
                         await client_socket.send(response.encode()) #to send other users messages you need their socket
                         await group_logg_message(profile, group, msg)
-                return f"Sent message to {group}"
+                return f"Sent message to {group.name}"
             else:
-                return "message_group->invalid group"
+                return f"message_group->invalid group | {room_id} or {group.name if group else 'None'}"
         else:
             return "message_group->invalid token"
     
