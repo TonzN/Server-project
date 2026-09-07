@@ -3,24 +3,21 @@ import database_manager as db
 class GroupChat:
     def __init__(self, name):
         self.name = name
-        self.users = []
+        self.users = {}
     
     def find_user(self, username):
-        for user in self.users:
-            if user["name"] == username:
-                return user
-        return None
+        return self.users.get(username)
 
     def add_user(self, user):
-        if not self.find_user(user["name"]):
-            self.users.append(user)
-            return True
-        return False
-
+        if user["name"] in self.users:
+            return False  # User already exists
+        self.users[user["name"]] = user
+        return True
+    
     def remove_user(self, username):
         user = self.find_user(username)
         if user:
-            self.users.remove(user)
+            del self.users[username]
             return True
         return False
 
