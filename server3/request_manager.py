@@ -127,6 +127,7 @@ def join_group_chat(group_name, token):
             return f"join_group_chat->group chat not found {group_name}"
 
         if not group_chat.add_user({"name": username}):
+            payload["subscribed_room"] = group_chat.name  #incase user leaves and rejoins the group chat, update the subscribed room to the group chat name
             return "join_group_chat->user already in group chat"
 
         payload["subscribed_room"] = group_chat.name  # Update the user's subscribed room to the group chat name
