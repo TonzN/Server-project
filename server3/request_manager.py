@@ -196,7 +196,7 @@ def join_room(receiving_username, token):
         print(f"join_room->Error: {e}")
         return "join_room->error"
 
-def leave_room(msg, token):
+def leave_room(msg, token, group =False):
     """Leave the current room without deleting it."""
 
     try:
@@ -206,16 +206,23 @@ def leave_room(msg, token):
             return "leave_room->invalid token"
 
         room_id = payload.get("subscribed_room")
-
+        
         if not room_id:
             return "leave_room->no room joined"
 
         username = payload["name"]
 
         # Remove user from active users
-        if not leave_2user_room(username, room_id):
-            return "leave_room->failed"
-
+        if not group:
+            if not leave_2user_room(username, room_id):
+                return "leave_room->failed"
+        else:
+            group_chat = get_group(room_id)
+            if not group_chat:
+                return "leave_room->group chat not found"
+            if not group_chat.remove_user(username):
+                return "leave_room->user not in group chat"
+            
         # User is no longer subscribed to this room
         payload["subscribed_room"] = None
 
