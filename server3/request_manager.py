@@ -109,6 +109,31 @@ def _join_room(recieving_username, token): #depricated
         print(f"join_room->Error: {e}")
         return "join_room->error"
 
+def join_group_chat(group_name, token):
+    """Join a group chat by name."""
+    try:
+        payload = get_user_profile(token)
+        if not payload:
+            return "join_group_chat->invalid token"
+
+        username = payload["name"]
+        group_chat = get_group(group_name)
+        
+        leave_room(payload, token)  # Leave current room before joining a new one incase the user is already in a room
+
+        if not group_chat:
+            return "join_group_chat->group chat not found"
+
+        if group_chat.add_user({"name": username}):
+            return "join_group_chat->user already in group chat"
+        
+        print(f"{username} joined group chat {group_name}")
+        return "join_group_chat->success"
+
+    except Exception as e:
+        print(f"join_group_chat->Error: {e}")
+        return "join_group_chat->error"
+
 def join_room(receiving_username, token):
     """Join or create a persistent DM room between two users."""
 
@@ -201,6 +226,33 @@ def leave_room(msg, token):
         print(f"leave_room->Error: {e}")
         return "leave_room->error"
 
+def leave_group_chat(group_name, token):
+    """Leave a group chat by name."""
+    try:
+        payload = get_user_profile(token)
+        if not payload:
+            return "leave_group_chat->invalid token"
+
+        username = payload["name"]
+        group_chat = get_group(group_name)
+
+        if not group_chat:
+            return "leave_group_chat->group chat not found"
+
+        user = group_chat.find_user(username)
+        if not user:
+            return "leave_group_chat->user not in group chat"
+
+        if not group_chat.remove_user(username):
+            return "leave_group_chat->user not in group chat"
+
+        print(f"{username} left group chat {group_name}")
+        return "leave_group_chat->success"
+
+    except Exception as e:
+        print(f"leave_group_chat->Error: {e}")
+        return "leave_group_chat->error"
+    
 def ping(msg, token=None): #updates users heartbeat time to maintain status health
     """Updates the heartbeat time of the user to maintain status health"""
     """Returns "pong" if the user is online and the heartbeat time is updated"""

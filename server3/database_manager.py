@@ -260,8 +260,6 @@ def get_2user_room_id(sender, receiver):
 def get_dm_key(user1, user2):
     return tuple(sorted([user1, user2]))
 
-#quick lookup for cached data
-#--------------------------------------#
 def get_room_invite(user):
     """Get room invite from the room invites list
        Returns the invite of the user if found"""
@@ -270,6 +268,31 @@ def get_room_invite(user):
 
 def add_room_invite(user):
     _room_invites[user] = {}
+
+def get_group(group):
+    try:
+        if group in _groups:
+            return _groups[group]
+        else:
+            return None
+    except Exception as e:
+        print(f"Databasemanager-> get_group: {e}")
+        return False
+    
+def add_group(group_name, group):
+    try:
+        _groups[group_name] = group
+    except Exception as e:
+        print(f"Could not add group {e}")
+        return False
+
+def remove_group(group_name):  
+    if group_name in _groups:
+        _groups[group_name] = None
+        del _groups[group_name]
+
+#quick lookup for cached data
+#--------------------------------------#
 
 def get_all_online_users():
     """Get all online users from the online users list
@@ -315,28 +338,6 @@ def remove_profile(key):
     if key in _user_profiles:
         _user_profiles[key] = None
         del _user_profiles[key]
-
-def get_group(group):
-    try:
-        if group in _groups:
-            return _groups[group]
-        else:
-            return None
-    except Exception as e:
-        print(f"Databasemanager-> get_group: {e}")
-        return False
-    
-def add_group(group_name, group):
-    try:
-        _groups[group_name] = group
-    except Exception as e:
-        print(f"Could not add group {e}")
-        return False
-
-def remove_group(group_name):  
-    if group_name in _groups:
-        _groups[group_name] = None
-        del _groups[group_name]
 
 def get_user_json_profile(user):
     try: 

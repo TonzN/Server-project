@@ -3,6 +3,26 @@ import database_manager as db
 class GroupChat:
     def __init__(self, name):
         self.name = name
+        self.users = []
+    
+    def find_user(self, username):
+        for user in self.users:
+            if user["name"] == username:
+                return user
+        return None
+
+    def add_user(self, user):
+        if not self.find_user(user["name"]):
+            self.users.append(user)
+            return True
+        return False
+
+    def remove_user(self, username):
+        user = self.find_user(username)
+        if user:
+            self.users.remove(user)
+            return True
+        return False
 
 """ For seemlesness internal and client sided room asignment user-user only will be done automatically internally to the server.
     For group chats or serverchats, the client will have to provide additional request information for what the client want to do."""
