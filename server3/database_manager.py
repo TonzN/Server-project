@@ -103,8 +103,10 @@ def leave_2user_room(user, room_id):
 
     try:
         room = get_2user_room(room_id)
-        room["active_users"].discard(user)
-        return True
+        if room:
+            room["active_users"].discard(user)
+            return True
+        return False
     
     except Exception as e:
         print(f"leave_2user_room->Error: {e} Room ID: {room_id}, User: {user}")
