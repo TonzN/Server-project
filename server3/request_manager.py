@@ -117,12 +117,12 @@ def join_group_chat(group_name, token):
             return "join_group_chat->invalid token"
 
         username = payload["name"]
-        group_chat = get_group(group_name)
+        group_chat = get_group(group_name[0])
         
         leave_room(payload, token)  # Leave current room before joining a new one incase the user is already in a room
 
         if not group_chat:
-            return "join_group_chat->group chat not found"
+            return f"join_group_chat->group chat not found {group_name}"
 
         if group_chat.add_user({"name": username}):
             return "join_group_chat->user already in group chat"
