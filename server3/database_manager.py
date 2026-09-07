@@ -101,18 +101,16 @@ def join_2user_room(user, room_id):
 def leave_2user_room(user, room_id):
     """Mark user as inactive without deleting the room."""
 
-    room = get_2user_room(room_id)
-
-    if not room:
-        print(
-            f"leave_2user_room->Error: "
-            f"Room {room_id} not found"
-        )
+    try:
+        room = get_2user_room(room_id)
+        room["active_users"].discard(user)
+        return True
+    
+    except Exception as e:
+        print(f"leave_2user_room->Error: {e} Room ID: {room_id}, User: {user}")
         return False
+        
 
-    room["active_users"].discard(user)
-
-    return True
 
 def get_2user_room(room_id):
     if debug_room:
@@ -128,7 +126,6 @@ def get_2user_room(room_id):
     if room_id in _rooms:
         return _rooms[room_id]
     else:
-        print(f"get_2user_room->Error: Room {room_id} not found")
         return None
 
 def create_2user_room(sender, receiver):
