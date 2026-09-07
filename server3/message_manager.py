@@ -127,9 +127,11 @@ async def message_group(data, token):
         if profile:
             group = data[0]
             msg = data[1]
-            if get_group(group):
-                if group == "global":
-                    online_users = get_all_online_users()
+            room_id = profile["subscribed_room"]
+            group = get_group(group)
+            if group and room_id == group.name:
+                if group.name == "global":
+                    online_users = group.users
                     for user in online_users:
                         if user != profile["name"]:
                             client_socket = get_user(user)

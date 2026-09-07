@@ -126,7 +126,8 @@ def join_group_chat(group_name, token):
 
         if group_chat.add_user({"name": username}):
             return "join_group_chat->user already in group chat"
-        
+
+        payload["subscribed_room"] = group_chat.name  # Update the user's subscribed room to the group chat name
         print(f"{username} joined group chat {group_name}")
         return "join_group_chat->success"
 
