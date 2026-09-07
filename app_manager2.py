@@ -272,6 +272,7 @@ class DropDownMenu(QWidget):
         global_chat.clicked.connect(self.select_global_chat)
         self.refresh_button.clicked.connect(request_online_users)
         client.heartbeat_functions["req_online_users"] = request_online_users
+    
 
     def select_global_chat(self):
         if self.current_chat != "global" and self.selected_dropdown != "global": #prevent multiple reloads of the same chat
@@ -283,7 +284,9 @@ class DropDownMenu(QWidget):
             config["selected_group"] = "global"
             msg = client.gen_message("leave_room", "[]", "main", config["token"])
             client.cross_comminication_queues["main"].put_nowait(msg)
-            if self.associate_chat:
+            msg = client.gen_message("join_group_chat", ["global"], "main", config["token"])
+            client.cross_comminication_queues["main"].put_nowait(msg)
+            if self.associate_chat: 
                 self.associate_chat.clear_messages()
                 user = "global"
                 msg = client.gen_message("pull_all_chat_history", [], "chat", config["token"])

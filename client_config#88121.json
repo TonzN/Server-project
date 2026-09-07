@@ -1,0 +1,15 @@
+{
+    "activate_heartbeat": false,
+    "selected_user": false,
+    "deactivate_heartbeat": false,
+    "stop": false,
+    "active_chat": true,
+    "token": false,
+    "username": false,
+    "login_attempts": 0,
+    "register_attempts": 0,
+    "successfull_login": false,
+    "client_sock": false,
+    "send_type": "user",
+    "selected_group": false
+}
