@@ -8,3 +8,4 @@ if __name__ == "__main__":
     window.connectLayout()
     window.show()
     sys.exit(app.exec())
+        

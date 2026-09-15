@@ -174,8 +174,6 @@ class Chat(QWidget):
                             msg = client.gen_message("message_group", [config["selected_group"], message], "chat", config["token"])
                             client.cross_comminication_queues["chat_message"].put_nowait(msg)
                             client.receieve_events["send_message"].set()
-                            room_subscribe = client.gen_message("join_room", [config["selected_group"]], "main", config["token"])
-                            client.cross_comminication_queues["main"].put_nowait(room_subscribe)
                             
                         self.input_field.clear()
             time.sleep(0.2)
@@ -326,6 +324,9 @@ class DropDownMenu(QWidget):
             self.clear_drop_down()
             self.current_chat = None
             self.online_users.clear()
+            leave_msg = client.gen_message("leave_group_chat", "[]", "main", config["token"])
+            client.cross_comminication_queues["main"].put_nowait(leave_msg)
+            client.receieve_events["main"].set()
             if self.associate_chat:
                 self.associate_chat.clear_messages()
         

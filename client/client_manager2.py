@@ -49,6 +49,8 @@ signals = {
 
 heartbeat_functions = {}
 
+debug_ignore_list = ["refresh_menu_panel", "chat"] #signal ingore printing to console, for debugging purposes
+
 async def send_to_server(client_sock, msg, supress = False):
     if type(msg) is dict:
         try:
@@ -101,8 +103,7 @@ async def receive_from_server(client_sock, wait_for=2, expected_tag=None, supres
         msg = json.loads(message)
         content = msg["data"][0]
         tag = msg["data"][1]
-        if  "main":
-            print(msg)
+        
         add_to_response_log(content)
 
         try:
@@ -126,10 +127,13 @@ def full_pull_queue(_queue, timeout=0.1):
                     try:
                         recieved = ast.literal_eval(recieved)
                     except Exception as e:
+                        print(recieved) #could be a string, not a dict, so we just print it to console
                      #   print(f"\nError at converting string to dict: {e}")
                         continue
                 if recieved:
                     if "signal" in recieved:
+                        if recieved["signal"] not in debug_ignore_list:
+                            print(f"Recieved from server: {recieved}")
                         if recieved["signal"] in signals:  
                             try:
                                 if "data" in recieved:
@@ -140,7 +144,7 @@ def full_pull_queue(_queue, timeout=0.1):
 
                             except Exception as e:
                                 print(f"Error at signal emit: {e}")
-                                 
+                        
             except queue.Empty:
                 break
     else:
