@@ -1,5 +1,7 @@
 UNIFIED-MAIN branch er den mest up to date
 
+![Demo](Klipp av app (1).gif)
+
 # super-server
 Trello
 All plans and what im working on is here
