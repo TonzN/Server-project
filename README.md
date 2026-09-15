@@ -1,6 +1,6 @@
 UNIFIED-MAIN branch er den mest up to date
 
-![Demo](Klipp av app (1).gif)
+![Demo](klipp.gif)
 
 # super-server
 Trello
