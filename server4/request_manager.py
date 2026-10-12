@@ -52,12 +52,14 @@ def join_group_chat(group_name, token, *, auth_user: UserContext):
         username = payload["name"]
         group_chat = get_group(group_name[0])
         
-        if current_room and current_room != group_chat.name: # If the user is already in a room and it's not the group chat they want to join, leave the current room first
-            leave_room(payload, token)  # Leave current room before joining a new one incase the user is already in a room
-            leave_group_chat(current_room, token)  # Leave current group chat if the user is already in one
-            
         if not group_chat:
             return f"join_group_chat->group chat not found {group_name}"
+
+        if current_room and current_room != group_chat.name:
+            if get_group(current_room):
+                leave_group_chat(current_room, token)
+            else:
+                leave_room(payload, token)
 
         if not group_chat.add_user({"name": username}):
             payload["subscribed_room"] = group_chat.name  #incase user leaves and rejoins the group chat, update the subscribed room to the group chat name
@@ -81,7 +83,9 @@ def join_room(receiving_username, token, *, auth_user: UserContext):
         if not payload:
             return "join_room->invalid token"
 
-        print(leave_group_chat(payload.get("subscribed_room"), token))  # Leave current group chat if the user is already in one
+        current_room = payload.get("subscribed_room")
+        if current_room and get_group(current_room):
+            leave_group_chat(current_room, token)
         # Request currently sends username as a list
         receiving_username = receiving_username[0]
 
