@@ -55,22 +55,6 @@ def with_db_connection(func):
     return wrapper
 
 #--------------------------------------#
-def wait_for(function, max_wait=5, *args, **kwargs):
-    """ yields database manager until the function is successfull 
-        Only use this for database initialization"""""
-    start = time.time()
-    while True:
-        if time.time() - start > max_wait:
-            break
-        try:
-            success = function(*args, **kwargs)
-            if success:
-                return success
-        except Exception as e:
-            print(f"wait_for->Error: {e}")
-            return False
-        time.sleep(0.1)
-
 #--------------------------------------#
 #Room management
 
@@ -255,9 +239,6 @@ def get_2user_room_id(sender, receiver):
         print(f"Could not get 2 user room {e}")
         return None
 
-def get_dm_key(user1, user2):
-    return tuple(sorted([user1, user2]))
-
 def get_room_invite(user):
     """Get room invite from the room invites list
        Returns the invite of the user if found"""
@@ -349,23 +330,6 @@ def get_user_json_profile(user):
 
 def get_all_users_json_profile():
     return users_file
-
-def update_user_json_profile(user, profile): #depricated
-    try:
-        if user in users_file:
-            users_file[user] = profile
-        else:
-            print(f"User {user} json file not found and could not be updated")
-            return False
-    except Exception as e:
-        print(f"Could not update user profile {e}")
-
-def add_user_json_profile(user, profile): #depricated
-    try:
-        users_file[user] = profile
-    except Exception as e:
-        print(f"Could not add user profile {e}")
-        return False
 
 def update_users_json_file(): #depricated
     try:

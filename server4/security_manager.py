@@ -1,3 +1,4 @@
+from auth_context import authenticated, UserContext
 from loads import *
 from database_manager import *
 import server_utils as utils
@@ -27,9 +28,10 @@ async def verify_user(user_data, token):
         print(f"verify_user->Error retrieving user profile: {e}")
     return 0
 
-async def get_permission_level(msg, token):
+@authenticated(denied="get_permission_level->Unverfied token")
+async def get_permission_level(msg, token, *, auth_user: UserContext):
     """Get the permission level of the user from the database."""
-    user = utils.get_user_profile(token)
+    user = auth_user.session
     if user["id"]:
         try:
             username = user["name"]
@@ -41,7 +43,8 @@ async def get_permission_level(msg, token):
     
     return "change_permission_level->Unverfied token"
 
-async def change_persmission_level(data, token):
+@authenticated(denied="change_permission_level->Invalid token")
+async def change_persmission_level(data, token, *, auth_user: UserContext):
     """Change the permission level of a user."""
     try: #checks if data is given in the right way
         target_user = data[0]
@@ -52,7 +55,7 @@ async def change_persmission_level(data, token):
     if not target_userfile:
         return "change_permission_level->Target user does not exist"
 
-    profile = utils.get_user_profile(token) #gets session profile from token
+    profile = auth_user.session #gets session profile from token
     if profile: 
         username = profile["name"]
         userfile = await db_get_user_profile(username) #gets user profile 
