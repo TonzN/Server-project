@@ -195,7 +195,7 @@ def leave_group_chat(group_name, token, *, auth_user: UserContext):
         print(f"leave_group_chat->Error: {e}")
         return "leave_group_chat->error"
     
-@authenticated(denied=false)
+@authenticated(denied=False)
 def ping(msg, token=None, *, auth_user: UserContext): #updates users heartbeat time to maintain status health
     """Updates the heartbeat time of the user to maintain status health"""
     """Returns "pong" if the user is online and the heartbeat time is updated"""
