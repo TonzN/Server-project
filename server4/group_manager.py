@@ -1,0 +1,50 @@
+import database_manager as db
+
+class GroupChat:
+    def __init__(self, name):
+        self.name = name
+        self.users = {}
+    
+    def find_user(self, username):
+        return self.users.get(username)
+
+    def add_user(self, user):
+        if user["name"] in self.users:
+            return False  # User already exists
+        self.users[user["name"]] = user
+        return True
+    
+    def remove_user(self, username):
+        user = self.find_user(username)
+        if user:
+            del self.users[username]
+            return True
+        return False
+
+""" For seemlesness internal and client sided room asignment user-user only will be done automatically internally to the server.
+    For group chats or serverchats, the client will have to provide additional request information for what the client want to do."""
+
+
+def automated_room_asignment(senderprofile, sender, reciever, message_type, id=None):
+    """PSEUDO CODE alg steps:
+    -1. sender and reciever are to be verified BEFORE this function is called!.
+    0. Check if message type is dm, group, or multi user(room)
+    1. Try to get a room of the sender and reciever to see if they are already in a room together
+    2. If they are not in a room together, create a new room for them, and switch senders active room id
+    3. If they are in a room together, return the room"""
+    """ A 2 user room is not the same as a group chat, it is a direct message room."""
+    
+    try:
+        #verify sender and reciever. 
+        if message_type == "dm": #asign sender/reciever users to a 2 user room
+            room_id = senderprofile["subscribed_room"]
+            if room_id:
+                return list(db.get_2user_room(room_id)["active_users"])
+            else:
+                print(f"automated_room_asignment->No room found for users {sender} and {reciever}")
+                return 
+    
+    except Exception as e:
+        print(f"automated_room_asignment->Error: {e}")
+        return None
+    

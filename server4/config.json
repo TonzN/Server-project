@@ -1,0 +1,79 @@
+{
+    "HOST": "127.0.0.1",
+    "PORT": 8765,
+    "run_server": true,
+    "user_capacity": 100,
+    "client_cmds": {
+        "create_client": true
+    },
+    "user_count": 9,
+    "function_keys": {
+        "veus": "verify_user",
+        "ping": "ping",
+        "set_user": "set_client",
+        "kill_server": "kill_server",
+        "get_id": "get_id",
+        "get_permission_level": "get_permission_level",
+        "create_user": "create_user",
+        "change_permission_level": "change_persmission_level",
+        "show_online_users": "show_online_users",
+        "message_user": "message_user",
+        "message_group": "message_group",
+        "pull_chat_history": "pull_group_chat_history",
+        "pull_user_chat_history_to_user": "pull_user_chat_history_to_user",
+        "pull_all_chat_history": "pull_all_chat_history",
+        "join_room": "join_room",
+        "leave_room": "leave_room",
+        "join_group_chat": "join_group_chat",
+        "leave_group_chat": "leave_group_chat"
+    },
+    "async_function_keys": {
+        "veus": "verify_user",
+        "set_user": "set_client",
+        "create_user": "create_user",
+        "get_id": "get_id",
+        "get_permission_level": "get_permission_level",
+        "change_permission_level": "change_persmission_level",
+        "message_user": "message_user",
+        "message_group": "message_group"
+    },
+    "message_function_keys": {
+        "message_user": "message_user",
+        "message_group": "message_group",
+        "pull_chat_history": "pull_group_chat_history",
+        "pull_user_chat_history_to_user": "pull_user_chat_history_to_user",
+        "pull_all_chat_history": "pull_all_chat_history"
+    },
+    "access_level": {
+        "change_to_admin": [
+            "admin"
+        ],
+        "change_to_basic": [
+            "admin"
+        ],
+        "levels": {
+            "admin": {
+                "min_security": "high",
+                "hiearchy": 1
+            },
+            "basic": {
+                "min_security": "low",
+                "hiearchy": 5
+            }
+        }
+    },
+    "security_level": {
+        "low": {
+            "access": "server"
+        },
+        "normal": {
+            "access": "basic"
+        },
+        "high": {
+            "access": "basic"
+        },
+        "max": {
+            "access": "admin"
+        }
+    }
+}

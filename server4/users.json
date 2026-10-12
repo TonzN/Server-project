@@ -1,0 +1,122 @@
+{
+    "test": {
+        "username": "test",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$XqAotKAcPDGekYKar3IXvQ$g/kPB6/ndzAFzNIWaUeRR/VW1z65/Qn4qSOii/0vlXw",
+        "id": "00000",
+        "permission_level": "basic",
+        "chat_history": {
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
+    },
+    "banana": {
+        "username": "banana",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$seyt1cIjP8zRjRfWs8KaSw$04RT6sHQoiAE0BPaMvTtCWC+6h1O/3p5T6EVExB6LSU",
+        "id": "00001",
+        "permission_level": "admin",
+        "chat_history": {
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
+    },
+    "Toni": {
+        "username": "Toni",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$emwojPv1WuLBC/okkP/+Zw$o6CXIC3v5XghDg4btf+JRohezWGmaeDXtkXyUbB4/wE",
+        "id": "00002",
+        "permission_level": "admin",
+        "chat_history": {
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
+    },
+    "test2": {
+        "username": "test2",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$mEwnR+K98w2IuA+HOme+MA$JZlYJ/oCWta/CjUxQgHRd1E2vo12xqiGCpzLzgRcZoE",
+        "id": "00003",
+        "permission_level": "basic",
+        "chat_history": {
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
+    },
+    "Macaroni": {
+        "username": "Macaroni",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$xf/O0rtyMW3/Gnki5pnYxg$GNyPsUWVtVb5HYhiExiQ3aKUcdG4OpVrNvwV7xFU7Ug",
+        "id": "00004",
+        "permission_level": "basic",
+        "chat_history": {
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
+    },
+    "cisker": {
+        "username": "cisker",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$I4vmKZjAnIFvZn3OLZAGEw$W6MJkwLUs5p+0/wCsWg1JX6pUfdyaSX1Gfcie2l1fm4",
+        "id": "00005",
+        "permission_level": "basic",
+        "chat_history": {
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
+    },
+    "cisker2": {
+        "username": "cisker2",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$evxu2MMgkIbvrdSVW5wsYg$V8xq2dx2Ln71LsxaKjr9E9KxHTgYila+ZYyIeyAa1Hw",
+        "id": "00007",
+        "permission_level": "basic",
+        "chat_history": {
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
+    },
+    "EgElskarBarn123": {
+        "username": "EgElskarBarn123",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$mTZW8MiSBJ5FZfv5IOrATg$8IZUC056U/PjP3VEcvcgJ91p+sOKooNLhx8KlH3KusE",
+        "id": "00008",
+        "permission_level": "basic",
+        "chat_history": {
+            "global": []
+        },
+        "friends": {},
+        "groups": {},
+        "blacklist": {},
+        "securitymode": "normal",
+        "friendrequests": {},
+        "preferences": {}
+    }
+}
