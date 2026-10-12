@@ -97,7 +97,7 @@ def get_user_profile(token):
             else:
                 return False
         else:
-            print(f"INVALID TOKEN {token}")
+            print("INVALID TOKEN")
             return False
     except Exception as e:
         print(f"Error: get_user_profile: {e}")

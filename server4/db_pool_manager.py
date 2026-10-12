@@ -1,4 +1,5 @@
 import asyncpg as pg
+import os
 
 class PoolManager:
     """Manages multiple database connection pools. 
@@ -36,11 +37,11 @@ async def setup_db_connectionpool():
     """Set up a connection pool to the database.  """
     try:
         pool = await pg.create_pool(
-            host="127.0.0.1",
-            port=5432,
-            database="database",
-            user="toni",
-            password="1234"
+            host=os.getenv("SERVER4_DB_HOST", "127.0.0.1"),
+            port=int(os.getenv("SERVER4_DB_PORT", "5432")),
+            database=os.getenv("SERVER4_DB_NAME", "database"),
+            user=os.getenv("SERVER4_DB_USER", "toni"),
+            password=os.getenv("SERVER4_DB_PASSWORD", "1234")
         )
         return pool
         

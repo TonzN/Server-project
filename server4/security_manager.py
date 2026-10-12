@@ -64,7 +64,9 @@ async def change_persmission_level(data, token, *, auth_user: UserContext):
             if not "change_to_"+new_access_level in config["access_level"]:
                 return "access_level does not exist"
             if access_level in config["access_level"]["change_to_"+new_access_level]:
-                target_userfile["permission_level"] = new_access_level
+                updated = await db_add_user_data(target_user, "permission_level", new_access_level)
+                if not updated:
+                    return "change_permission_level->Database update failed"
                 print(f"User {target_user} now has permission level {new_access_level}")
                 return "Success"
             else:

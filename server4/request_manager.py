@@ -1,6 +1,7 @@
 from auth_context import authenticated, UserContext
 from loads import *
 from database_manager import *
+from group_manager import *
 from server_utils import *
 
 def kill_server(msg, token):

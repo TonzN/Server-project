@@ -48,7 +48,7 @@ async def set_client(userdata, token): #only used when a client joins! profile c
         if not user: #prevents same user being connected from 2 sessions
             payload = utils.validate_token(token) 
             userfile = await db_get_user_profile(username) #gets user profile from database
-            if payload and users_file: 
+            if payload and userfile: 
                 """user profile manages a clients session data to keep it alive and info the server needs of the client, must not be sent to client"""
                 session_key = payload["session_key"] #session key lets you access the users session profile, socket and username
                 profile = build_session_profile(userfile, sock, time.time())
@@ -136,7 +136,7 @@ async def client_recieve_handler(websocket, loop, recieve_timout):
         if function in func_keys:  #checks if action requested exist as something the client can call for
             try:
                 if function != "ping" and function != "show_online_users" and print_incoming_requests:
-                    print(f"Function: {function} \n Data: {msg} \n Token: {token} \n Tag: {tag}")
+                    print(f"Function: {function} \n Tag: {tag}")
                     print(f"function_keys: {function in func_keys} \n async_function_keys: {function in async_function_keys} \n message_function_keys: {function in message_function_keys}\n")
                 if function in message_function_keys: #functions with unique cases needs its own call
                     response =  str(await globals()[func_keys[function]](msg, token)) 
@@ -234,9 +234,11 @@ async def create_user(user_data, token): #userdata must be sent from the client 
             profile["password"] = hashed_password
             profile["id"] = utils.gen_user_id()
             profile["permission_level"] = "basic"
-            profile["securitymode"] = "normal"
+            profile["security_mode"] = "normal"
             ordered_profile = json_to_arr_ordered(profile, ("username", "password", "id", "permission_level", "securitymode"))
-            db_add_user_profile(ordered_profile) #adds user to database
+            insert_result = await db_add_user_profile(ordered_profile) # persist before returning success
+            if not insert_result:
+                return False
             update_users_count() #this updates user count to make sure next generated id is unique
             return 1
         else:
